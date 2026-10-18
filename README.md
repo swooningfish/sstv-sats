@@ -117,6 +117,7 @@ The [web app](#web-app) and `sstv-sats passes` show the exact shift for each pas
 Enter your latitude and longitude or Maidenhead locator, or click **Use my location**. You get:
 
 - a countdown to the next pass
+- a **world map** centred on you, with every satellite moving live or sped up (30×, 120× or 600×). The selected satellite shows its ground track, highlighted where it's in range of you, and the area that can hear it. Click any pass in the table to replay it on the map
 - a table of passes with rise and set times, compass directions, peak elevation and Doppler
 - **Enable alerts**, for a browser notification before each pass (only while the tab is open)
 - **Add to calendar (.ics)**, for reminders from your phone or computer calendar
@@ -262,6 +263,7 @@ Upload `_site/` to any static web host. Rerun the command at least once a week s
 - **Orbital data (TLEs):** downloaded from [CelesTrak](https://celestrak.org) by NORAD number. Satellites CelesTrak doesn't carry yet fall back to [SatNOGS DB](https://db.satnogs.org).
 - **Caching:** TLEs are cached for 12 hours in `~/.cache/sstv-sats` (change this with `SSTV_SATS_CACHE`). If the download fails, the older cached copy is used with a warning.
 - **Predictions:** SGP4, using [Skyfield](https://rhodesmill.org/skyfield/) on the command line and [satellite.js](https://github.com/shashwatak/satellite-js) in the web app. AOS and LOS are when the satellite crosses your horizon (0°).
+- **Map:** coastlines from [Natural Earth](https://www.naturalearthdata.com/) via [world-atlas](https://github.com/topojson/world-atlas), drawn on a canvas centred on your longitude. Day and night shading comes from the sun's position.
 - **Doppler:** `−f × range-rate / c`, worked out at AOS, TCA and LOS on the satellite's first downlink.
 
 ## Contributing

@@ -145,6 +145,7 @@
     const minEl = parseFloat($("minel").value) || 0, hours = Math.min(168, parseFloat($("hours").value) || 24);
     store.set("loc", { lat: $("lat").value, lon: $("lon").value, alt: $("alt").value, grid: $("grid").value, minel: minEl, hours });
     const obs = { latitude: loc.lat * DEG, longitude: loc.lon * DEG, height: loc.alt / 1000 };
+    if (window.SstvMap) SstvMap.setObserver(loc.lat, loc.lon, loc.alt / 1000);
     const start = Date.now();
     passes = [];
     for (const sat of catalog) {
@@ -173,7 +174,7 @@
       const elCls = p.tca.el >= 30 ? "el-high" : p.tca.el < 15 ? "el-low" : "";
       const now_ = p.aos.time <= now && p.los.time >= now;
       const f0 = p.sat.downlinks[0].freq_mhz;
-      return `<tr class="${now_ ? "now" : ""}">
+      return `<tr class="${now_ ? "now" : ""}" data-sat="${esc(p.sat.id)}" data-aos="${+p.aos.time}" title="Replay this pass on the map">
         <td><b>${esc(label(p.sat))}</b>${now_ ? ' <span class="small">overhead now</span>' : ""}</td>
         <td>${f}</td>
         <td>${fmtDay(p.aos.time)} <b>${fmtTime(p.aos.time)}</b> <span class="small">${compass(p.aos.az)}</span></td>
@@ -191,6 +192,7 @@
     const upcoming = visible().filter((p) => p.los.time > now);
     if (!upcoming.length) { $("next").hidden = true; return; }
     const p = upcoming[0];
+    if (window.SstvMap) SstvMap.setAuto(p.sat.id);
     $("next").hidden = false;
     $("next-name").textContent = `${label(p.sat)} · ${p.sat.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / ")} MHz`;
     $("next-mode").textContent = `SSTV mode: ${modeText(p.sat)}`;
@@ -302,6 +304,14 @@
     ]);
     catalog = cat.satellites; tles = parseTles(tleText);
     renderCatalog(); updateAlertButton();
+    if (window.SstvMap) {
+      SstvMap.setSatellites(catalog.filter((s) => s.active !== false && tles[s.norad_id]).map((s) => ({
+        id: s.id, label: label(s), freq: s.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / "),
+        l1: tles[s.norad_id].l1, l2: tles[s.norad_id].l2,
+      })));
+      SstvMap.setHidden(hidden);
+      $("map-card").hidden = false;
+    }
     if (saved && saved.lat && saved.lon) run();
   }
 
@@ -325,6 +335,7 @@
     if (!id) return;
     hidden.has(id) ? hidden.delete(id) : hidden.add(id);
     store.set("hidden", [...hidden]);
+    if (window.SstvMap) SstvMap.setHidden(hidden);
     renderFilters(); renderPasses(); tick();
   });
   $("alerts").addEventListener("click", async () => {
@@ -337,6 +348,12 @@
   });
   $("lead").addEventListener("change", () => store.set("lead", parseFloat($("lead").value) || 10));
   $("ics").addEventListener("click", downloadIcs);
+  $("passes").addEventListener("click", (e) => {
+    const row = e.target.closest("tr[data-sat]");
+    if (!row || !window.SstvMap) return;
+    SstvMap.showPass(row.dataset.sat, +row.dataset.aos);
+    $("map-card").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   setInterval(tick, 1000);
   setInterval(() => { if (passes.length) { renderPasses(); } }, 60000);
   init().catch((e) => { document.querySelector("main").insertAdjacentHTML("afterbegin", `<p class="card">Couldn't load satellite data: ${esc(e.message)}</p>`); });

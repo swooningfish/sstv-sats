@@ -71,6 +71,28 @@
     </div>
   </section>
 
+  <section class="card" id="map-card" hidden>
+    <div class="results-head">
+      <h2>Satellite map</h2>
+      <div class="buttons">
+        <label class="inline">Track <select id="map-sat"></select></label>
+        <div class="seg" id="map-speed" role="group" aria-label="Map speed">
+          <button type="button" data-speed="1">Live</button><button type="button" data-speed="30">30×</button><button type="button" data-speed="120">120×</button><button type="button" data-speed="600">600×</button>
+        </div>
+      </div>
+    </div>
+    <div class="map-wrap"><canvas id="map" role="img" aria-label="World map showing where each SSTV satellite is, centred on your location"></canvas></div>
+    <div class="map-status"><b id="map-clock"></b><span id="map-info"></span></div>
+    <div class="legend">
+      <span><i class="dot" style="background: var(--accent)"></i>Satellite</span>
+      <span><i class="dot" style="background: var(--good)"></i>In range of you now</span>
+      <span><i class="line" style="background: var(--warn)"></i>Next 100 min of track</span>
+      <span><i class="line thick" style="background: var(--good)"></i>Track while in range</span>
+      <span><i class="ring" style="border-color: var(--warn)"></i>Area that can hear it</span>
+      <span><i class="ring dashed"></i>Your range (500 km altitude)</span>
+    </div>
+  </section>
+
   <section class="card" id="results" hidden>
     <div class="results-head">
       <h2>Upcoming passes</h2>
@@ -88,6 +110,7 @@
         <tbody id="passes"></tbody>
       </table>
     </div>
+    <p class="hint">Click a pass to replay it on the map.</p>
     <p class="hint" id="data-age"></p>
   </section>
 
@@ -121,9 +144,10 @@
   </section>
 </main>
 
-<footer>Orbital data from <a href="https://celestrak.org">CelesTrak</a> &amp; <a href="https://db.satnogs.org">SatNOGS</a>, refreshed daily. Predictions by <a href="https://github.com/shashwatak/satellite-js">satellite.js</a> (SGP4).</footer>
+<footer>Orbital data from <a href="https://celestrak.org">CelesTrak</a> &amp; <a href="https://db.satnogs.org">SatNOGS</a>, refreshed daily. Predictions by <a href="https://github.com/shashwatak/satellite-js">satellite.js</a> (SGP4). Map data from <a href="https://www.naturalearthdata.com/">Natural Earth</a>.</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+<script src="map.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
