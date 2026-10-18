@@ -2,8 +2,9 @@
 
 On 70 cm a LEO satellite's downlink is shifted by up to about +/-10 kHz by Doppler, which
 is enough to garble FM SSTV on a 12.5 kHz channel. The usual trick is to programme the
-same satellite several times at different offsets and step down through them during
-the pass (high at AOS, nominal at TCA, low at LOS).
+same satellite several times at different offsets and step through them during the
+pass (high at AOS, nominal at TCA, low at LOS). Channels are written in ascending
+frequency order (minus, centre, plus) so they sit in order in the radio's memory list.
 """
 
 from __future__ import annotations
@@ -20,11 +21,11 @@ HEADER = [
     "URCALL", "RPT1CALL", "RPT2CALL", "DVCODE",
 ]
 
-# Doppler offsets in kHz, by profile, for UHF (>= 300 MHz) and VHF downlinks.
+# Doppler offsets in kHz, by profile, for UHF (>= 300 MHz) and VHF downlinks, lowest first.
 DOPPLER_PROFILES = {
     "none": {"uhf": [0], "vhf": [0]},
-    "basic": {"uhf": [10, 0, -10], "vhf": [0]},
-    "full": {"uhf": [10, 5, 0, -5, -10], "vhf": [5, 0, -5]},
+    "basic": {"uhf": [-10, 0, 10], "vhf": [0]},
+    "full": {"uhf": [-10, -5, 0, 5, 10], "vhf": [-5, 0, 5]},
 }
 
 

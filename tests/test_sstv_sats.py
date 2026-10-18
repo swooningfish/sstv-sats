@@ -43,11 +43,18 @@ def test_chirp_csv_basic_doppler():
     assert len(rows) == 7
     parsed = list(csv.DictReader(io.StringIO(to_csv(rows))))
     assert list(parsed[0].keys()) == HEADER
-    assert [r["Frequency"] for r in parsed[:3]] == ["437.635000", "437.625000", "437.615000"]
+    assert [r["Frequency"] for r in parsed[:3]] == ["437.615000", "437.625000", "437.635000"]
     assert [r["Location"] for r in parsed] == [str(i) for i in range(1, 8)]
     assert all(len(r["Name"]) <= 8 for r in parsed)
-    assert parsed[0]["Name"] == "RS40S+10" and parsed[2]["Name"] == "RS40S-10"
+    assert [r["Name"] for r in parsed[:3]] == ["RS40S-10", "RS40S", "RS40S+10"]
     assert all(r["Mode"] == "FM" and r["Duplex"] == "" for r in parsed)
+
+
+def test_chirp_doppler_channels_ascend_minus_centre_plus():
+    rows = chirp_rows(select(load_catalog(), ["RS40S"]), doppler="full")
+    assert [r["Name"] for r in rows] == ["RS40S-10", "RS40S-5", "RS40S", "RS40S+5", "RS40S+10"]
+    freqs = [float(r["Frequency"]) for r in rows]
+    assert freqs == sorted(freqs)
 
 
 def test_chirp_name_length_is_respected():
