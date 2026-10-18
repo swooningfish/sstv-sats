@@ -11,7 +11,7 @@ Know when the amateur satellites that send **slow-scan TV (SSTV) pictures** will
 - 📻 **Programme your radio:** download [`chirp/sstv_satellites_chirp.csv`](chirp/sstv_satellites_chirp.csv) and use **File → Import** in CHIRP.
 - 🔁 **During a pass:** start on the `+10` channel as the satellite rises, move to the centre channel near the top of the pass, and finish on `-10` as it sets.
 - 🔔 **Get alerts:** the web app has browser alerts and a calendar download. For phone push alerts, run `sstv-sats watch --ntfy <topic>` (see [Alerts](#alerts)).
-- 🎧 **Decode:** FM, wide filter, record the whole pass, and decode with MMSSTV, QSSTV or Robot36. On a Quansheng UV-K5 or UV-K1 you can decode on the radio with the [F4WHN SSTV app](https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-SSTV).
+- 🎧 **Decode:** FM, wide filter, record the whole pass, and decode with MMSSTV, QSSTV or Robot36. On a Quansheng UV-K5 or UV-K1 you can decode on the radio with the [F4HWN SSTV app](https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-SSTV).
 - 🖼️ **Modes:** Robot 36, Robot 72, Martin M1 and PD120/PD180. Decoders pick the mode automatically (see [SSTV modes](#sstv-modes)).
 
 ## Contents
@@ -62,9 +62,9 @@ You don't need to know the mode in advance. Every SSTV picture starts with a sho
 | Martin M1 | about 114 s, colour | SONATE 2 |
 | PD120 / PD180 | 126 s / 187 s, colour | ISS on 145.800 during ARISS events |
 
-#### Decoding on a Quansheng UV-K5 or UV-K1 (F4WHN firmware)
+#### Decoding on a Quansheng UV-K5 or UV-K1 (F4HWN firmware)
 
-If you have a Quansheng UV-K5 or UV-K1, F4WHN's custom firmware has an **[SSTV app](https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-SSTV)** that decodes pictures on the radio's own screen, with no computer needed:
+If you have a Quansheng UV-K5 or UV-K1, F4HWN's custom firmware has an **[SSTV app](https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-SSTV)** that decodes pictures on the radio's own screen, with no computer needed:
 
 > It recognizes 14 VIS-selected modes: Robot 36/72, Martin M1/M2, Scottie S1/S2/DX, and PD50/90/120/160/180/240/290.
 
@@ -121,6 +121,7 @@ Enter your latitude and longitude or Maidenhead locator, or click **Use my locat
 - **Enable alerts**, for a browser notification before each pass (only while the tab is open)
 - **Add to calendar (.ics)**, for reminders from your phone or computer calendar
 - download links for the CHIRP files
+- a collapsible **UV-K1 / UV-K5 SSTV app keys** panel, showing which keys do what in the F4HWN firmware's SSTV app on a picture of each keypad
 
 Everything is calculated in your browser, and your location is never sent anywhere. The site rebuilds every day with fresh orbital data.
 
@@ -226,7 +227,7 @@ To keep `watch` running on a Raspberry Pi or home server, use [Docker](#docker).
   - Linux: QSSTV
   - macOS: Black Cat SSTV
   - Android: Robot36
-  - On the radio: the [F4WHN SSTV app](https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-SSTV) for the Quansheng UV-K5 and UV-K1
+  - On the radio: the [F4HWN SSTV app](https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-SSTV) for the Quansheng UV-K5 and UV-K1
 - **Mode:** leave your decoder on auto-detect (VIS) so it picks the right mode for each picture.
 - **Antenna:** a handheld 70 cm Yagi, or an Arrow-style dual-band antenna, is a big step up from a rubber duck. Turn it to follow the directions in the pass table.
 

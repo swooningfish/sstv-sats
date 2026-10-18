@@ -9,16 +9,18 @@
   --good: #1a8a4a;
   --warn: #b36b00;
   --row-hl: #eaf1ff;
+  --keypad: #e7ebf3;
+  --key-hl: #e3ecff;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0d1320; --card: #151d2e; --text: #e6ebf5; --muted: #98a3b8; --border: #26324a;
-    --accent: #5b95ff; --accent-text: #08101e; --good: #4cc488; --warn: #f0a640; --row-hl: #1c2a46;
+    --accent: #5b95ff; --accent-text: #08101e; --good: #4cc488; --warn: #f0a640; --row-hl: #1c2a46; --keypad: #0f1626; --key-hl: #1a2a4a;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0d1320; --card: #151d2e; --text: #e6ebf5; --muted: #98a3b8; --border: #26324a;
-  --accent: #5b95ff; --accent-text: #08101e; --good: #4cc488; --warn: #f0a640; --row-hl: #1c2a46;
+  --accent: #5b95ff; --accent-text: #08101e; --good: #4cc488; --warn: #f0a640; --row-hl: #1c2a46; --keypad: #0f1626; --key-hl: #1a2a4a;
 }
 
 * { box-sizing: border-box; }
@@ -46,6 +48,8 @@ button:hover, .button:hover { border-color: var(--accent); }
 .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .hint { color: var(--muted); font-size: .85rem; margin: 10px 0 0; }
 code { font-size: .85em; }
+a { color: var(--accent); }
+.keymap summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
 .results-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; }
 .results-head h2 { margin: 0; }
 .filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
@@ -68,3 +72,42 @@ tr.now td { background: var(--row-hl); }
 .tips ul { margin: 0; padding-left: 20px; }
 footer { color: var(--muted); font-size: .8rem; padding-bottom: 30px; }
 footer a { color: inherit; }
+
+/* Collapsible UV-K1 / UV-K5 key map */
+.keymap summary { cursor: pointer; list-style: none; padding-left: 1.4em; position: relative; }
+.keymap summary::-webkit-details-marker { display: none; }
+.keymap summary::before { content: "▸"; position: absolute; left: 0; top: 0; color: var(--accent); display: inline-block; transition: transform .15s; }
+.keymap[open] summary::before { transform: rotate(90deg); }
+.summary-title { font-weight: 700; font-size: 1.05rem; margin-right: 8px; }
+.keymap-body { margin-top: 12px; }
+.keymap-body p { margin: 0 0 10px; }
+.steps { margin: 0 0 16px; padding-left: 20px; }
+kbd {
+  font: 600 .8rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap;
+  border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 2px 6px; background: var(--bg);
+}
+.keypads { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
+.keypad { margin: 0; flex: 1 1 300px; max-width: 420px; background: var(--keypad); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+.keypad figcaption { font-weight: 700; margin-bottom: 8px; }
+.kp-body { display: flex; gap: 8px; }
+.kp-side { display: flex; flex-direction: column; gap: 6px; flex: 0 0 56px; }
+.kp-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; flex: 1; }
+.kp-key {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  min-height: 52px; padding: 4px 2px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--muted);
+}
+.kp-key.side { min-height: 44px; }
+.kp-label { font-weight: 700; font-size: .95rem; color: var(--text); opacity: .55; }
+.kp-sub { font-size: .62rem; line-height: 1.1; opacity: .7; }
+.kp-key.used { border: 2px solid var(--accent); background: var(--key-hl); color: var(--text); }
+.kp-key.used .kp-label { opacity: 1; }
+.kp-tag { margin-top: 2px; font-size: .62rem; line-height: 1.1; font-weight: 700; color: var(--accent); }
+.kp-key.muted { border-style: dashed; border-color: var(--muted); background: transparent; }
+.kp-key.muted .kp-tag { color: var(--muted); }
+.keytable td:first-child { width: 1%; }
+.keytable td { white-space: normal; }
+@media (max-width: 480px) {
+  .kp-body { flex-direction: column; }
+  .kp-side { flex-direction: row; flex-basis: auto; }
+  .kp-side .kp-key { flex: 1; }
+}

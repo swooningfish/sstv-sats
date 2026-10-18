@@ -36,6 +36,29 @@
     </form>
   </section>
 
+  <details class="card keymap" id="keymap">
+    <summary>
+      <span class="summary-title">Quansheng UV-K1 / UV-K5 SSTV app keys</span>
+      <span class="small">F4HWN custom firmware</span>
+    </summary>
+    <div class="keymap-body">
+      <p>The <a href="https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-SSTV">SSTV app</a> in F4HWN's custom firmware decodes pictures on the radio's own screen. It recognises Robot 36/72, Martin M1/M2, Scottie S1/S2/DX and PD50 to PD290, which covers every mode these satellites use.</p>
+      <ol class="steps">
+        <li>Install the app with <a href="https://armel.github.io/uvstudio/">UV Studio</a>. It's part of the experimental Labs edition.</li>
+        <li>Set the VFO to <b>FM</b> and tune to the satellite's frequency.</li>
+        <li>Press <kbd>F</kbd> then <kbd>7</kbd> to launch the app. It starts listening straight away.</li>
+      </ol>
+      <div class="keypads" id="keypads"></div>
+      <div class="table-wrap">
+        <table class="keytable">
+          <thead><tr><th>Key</th><th>Action</th></tr></thead>
+          <tbody id="keytable"></tbody>
+        </table>
+      </div>
+      <p class="hint">The arrow keys (◀ ▶ on the UV-K1, ▲ ▼ on the UV-K5) aren't used by the SSTV app. Key layouts follow F4HWN's <a href="https://armel.github.io/uvstudio/">UV Studio</a> virtual keypads.</p>
+    </div>
+  </details>
+
   <section class="card" id="next" hidden>
     <div class="next-head">
       <div>
@@ -89,7 +112,7 @@
     <h2>Receiving tips</h2>
     <ul>
       <li>Modes in use: Robot 36, Robot 72, Martin M1 and PD120/PD180. Decoders read the VIS code at the start of each picture and pick the mode automatically.</li>
-      <li>On a Quansheng UV-K5 or UV-K1, the <a href="https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-SSTV">F4WHN custom firmware's SSTV app</a> decodes pictures on the radio itself.</li>
+      <li>On a Quansheng UV-K5 or UV-K1, the <a href="https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-SSTV">F4HWN custom firmware's SSTV app</a> decodes pictures on the radio itself.</li>
       <li>FM, wide filter if your radio has one. Squelch open, volume steady, and feed the audio to <b>MMSSTV</b> or <b>RX-SSTV</b> (Windows), <b>QSSTV</b> (Linux), <b>Black Cat SSTV</b> (macOS) or <b>Robot36</b> (Android).</li>
       <li>Passes above 30° give the best pictures. A handheld Yagi beats a rubber duck by a mile.</li>
       <li>These satellites send SSTV <em>periodically</em>, not all the time. Record the whole pass and decode it afterwards.</li>
