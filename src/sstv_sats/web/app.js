@@ -239,6 +239,7 @@
       const note = s.active === false ? `Inactive. ${s.notes || ""}` : (has ? "" : "No current orbital data. ") + (s.notes || "");
       return `<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${s.norad_id ?? ""}</td>
         <td>${s.downlinks.map((d) => d.freq_mhz.toFixed(3) + (d.note ? ` <span class="small">${esc(d.note)}</span>` : "")).join("<br>")}</td>
+        <td>${s.downlinks.map((d) => (d.sstv_mode ? esc(d.sstv_mode) : '<span class="small">Not published</span>')).join("<br>")}</td>
         <td class="notes">${esc(note)}</td></tr>`;
     }).join("");
   }

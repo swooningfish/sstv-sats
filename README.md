@@ -11,7 +11,8 @@ Know when the amateur satellites that send **slow-scan TV (SSTV) pictures** will
 - 📻 **Programme your radio:** download [`chirp/sstv_satellites_chirp.csv`](chirp/sstv_satellites_chirp.csv) and use **File → Import** in CHIRP.
 - 🔁 **During a pass:** start on the `+10` channel as the satellite rises, move to the centre channel near the top of the pass, and finish on `-10` as it sets.
 - 🔔 **Get alerts:** the web app has browser alerts and a calendar download. For phone push alerts, run `sstv-sats watch --ntfy <topic>` (see [Alerts](#alerts)).
-- 🎧 **Decode:** FM, wide filter, record the whole pass, and decode with MMSSTV, QSSTV or Robot36.
+- 🎧 **Decode:** FM, wide filter, record the whole pass, and decode with MMSSTV, QSSTV or Robot36. On a Quansheng UV-K5 or UV-K1 you can decode on the radio with the [F4WHN SSTV app](https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-SSTV).
+- 🖼️ **Modes:** Robot 36, Robot 72, Martin M1 and PD120/PD180. Decoders pick the mode automatically (see [SSTV modes](#sstv-modes)).
 
 ## Contents
 
@@ -28,24 +29,50 @@ Know when the amateur satellites that send **slow-scan TV (SSTV) pictures** will
 
 ## The satellites
 
-| ID | Name | NORAD | Downlink (MHz) | Notes |
-|---|---|---|---|---|
-| RS58S | Monitor 3 | 57180 | 435.290 | Robot36 |
-| RS38S | Vizard Meteo | 57189 | 437.825 | Robot72 |
-| RS40S | Umka 1 | 57172 | 437.625 | |
-| RS49S | Nanozond 1 | 57190 | 437.000 | **Re-entered 2026-04-20**, so it is excluded by default |
-| RS27S | UTMN 2 | 57203 | 436.125 | Robot36 |
-| RS18S | Sakhacube Cholbon | 67290 | 437.350 | |
-| RS95S | QMR KWT 2 | 67291 | 436.950 | |
-| RS57S | Monitor 4 | 57182 | 436.080 | SatNOGS lists GMSK only, so SSTV is unconfirmed |
-| RS90S | Luca 1 | 67287 | 437.180 | SatNOGS lists GMSK only, so SSTV is unconfirmed |
-| ISS | ISS | 25544 | 145.800 / 437.550 | ARISS SSTV runs as [scheduled events](https://ariss-sstv.blogspot.com/) |
-| SONATE-2 | SONATE 2 | 59112 | 145.880 | Martin M1 |
-| JAMX01 | JAMX01 | 98248 | 435.175 | Temporary NORAD ID, TLE from SatNOGS |
-| IO-86 | LAPAN A2 | 40931 | 435.880 | Equatorial orbit, so it is only visible between about ±20° latitude |
-| GALAPAGOS | Galapagos UTE SWSU | 67279 | 437.050 | |
+| ID | Name | NORAD | Downlink (MHz) | SSTV mode | Notes |
+|---|---|---|---|---|---|
+| RS58S | Monitor 3 | 57180 | 435.290 | Robot 36 | |
+| RS38S | Vizard Meteo | 57189 | 437.825 | Robot 72 | |
+| RS40S | Umka 1 | 57172 | 437.625 | Not published | |
+| RS49S | Nanozond 1 | 57190 | 437.000 | Not published | **Re-entered 2026-04-20**, so it is excluded by default |
+| RS27S | UTMN 2 | 57203 | 436.125 | Robot 36 | |
+| RS18S | Sakhacube Cholbon | 67290 | 437.350 | Not published | |
+| RS95S | QMR KWT 2 | 67291 | 436.950 | Not published | |
+| RS57S | Monitor 4 | 57182 | 436.080 | Not published | SatNOGS lists GMSK only, so SSTV is unconfirmed |
+| RS90S | Luca 1 | 67287 | 437.180 | Not published | SatNOGS lists GMSK only, so SSTV is unconfirmed |
+| ISS | ISS | 25544 | 145.800 | PD120 or PD180 | ARISS SSTV runs as [scheduled events](https://ariss-sstv.blogspot.com/) |
+| | | | 437.550 | Robot 36 | |
+| SONATE-2 | SONATE 2 | 59112 | 145.880 | Martin M1 | |
+| JAMX01 | JAMX01 | 98248 | 435.175 | Not published | Temporary NORAD ID, TLE from SatNOGS |
+| IO-86 | LAPAN A2 | 40931 | 435.880 | None (SSDV) | Sends SSDV packet images, which SSTV decoders can't read. Equatorial orbit, so it is only visible between about ±20° latitude |
+| GALAPAGOS | Galapagos UTE SWSU | 67279 | 437.050 | Not published | |
 
 These satellites send SSTV **periodically**, not all the time, so a pass won't always carry a picture.
+
+### SSTV modes
+
+The modes come from the transmitter listings in [SatNOGS DB](https://db.satnogs.org). "Not published" means SatNOGS lists SSTV on that frequency without saying which mode.
+
+You don't need to know the mode in advance. Every SSTV picture starts with a short **VIS code** that names its mode, and decoders set to auto-detect switch to the right mode automatically.
+
+| Mode | Picture time | Used by |
+|---|---|---|
+| Robot 36 | 36 s, colour | Monitor 3, UTMN 2, ISS on 437.550 |
+| Robot 72 | 72 s, colour | Vizard Meteo |
+| Martin M1 | about 114 s, colour | SONATE 2 |
+| PD120 / PD180 | 126 s / 187 s, colour | ISS on 145.800 during ARISS events |
+
+#### Decoding on a Quansheng UV-K5 or UV-K1 (F4WHN firmware)
+
+If you have a Quansheng UV-K5 or UV-K1, F4WHN's custom firmware has an **[SSTV app](https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-SSTV)** that decodes pictures on the radio's own screen, with no computer needed:
+
+> It recognizes 14 VIS-selected modes: Robot 36/72, Martin M1/M2, Scottie S1/S2/DX, and PD50/90/120/160/180/240/290.
+
+That covers every mode these satellites use. A few things to know:
+
+- Set the VFO to FM before launching the app.
+- Pictures are shown in monochrome on the radio's display.
+- The app is part of the experimental "Labs" edition and is installed with UV Studio. See the [wiki page](https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-SSTV) for setup and controls.
 
 ## CHIRP memory files
 
@@ -199,6 +226,8 @@ To keep `watch` running on a Raspberry Pi or home server, use [Docker](#docker).
   - Linux: QSSTV
   - macOS: Black Cat SSTV
   - Android: Robot36
+  - On the radio: the [F4WHN SSTV app](https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki/App-SSTV) for the Quansheng UV-K5 and UV-K1
+- **Mode:** leave your decoder on auto-detect (VIS) so it picks the right mode for each picture.
 - **Antenna:** a handheld 70 cm Yagi, or an Arrow-style dual-band antenna, is a big step up from a rubber duck. Turn it to follow the directions in the pass table.
 
 ## Hosting your own copy

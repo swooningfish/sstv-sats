@@ -30,6 +30,14 @@ def test_catalog_loads_and_is_consistent():
     assert all(s.active for s in select(sats))
 
 
+def test_sstv_modes_flow_into_chirp_comments():
+    sats = {s.id: s for s in load_catalog()}
+    assert sats["RS58S"].primary.sstv_mode == "Robot 36"
+    assert sats["SONATE-2"].primary.sstv_mode == "Martin M1"
+    rows = chirp_rows([sats["RS38S"]], doppler="none")
+    assert rows[0]["Comment"].endswith("Robot 72")
+
+
 def test_select_by_name_and_id():
     sats = load_catalog()
     assert [s.id for s in select(sats, ["umka"])] == ["RS40S"]

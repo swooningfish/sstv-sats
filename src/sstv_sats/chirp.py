@@ -56,6 +56,8 @@ def chirp_rows(
                 comment = f"{sat.label} SSTV RX"
                 if off:
                     comment += f" Doppler {off:+d}kHz ({'AOS' if off > 0 else 'LOS'})"
+                if dl.sstv_mode:
+                    comment += f" - {dl.sstv_mode}"
                 if dl.note:
                     comment += f" - {dl.note}"
                 rows.append({

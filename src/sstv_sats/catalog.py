@@ -13,6 +13,7 @@ from typing import Iterable, Optional
 class Downlink:
     freq_mhz: float
     mode: str = "FM"
+    sstv_mode: str = ""
     note: str = ""
 
 

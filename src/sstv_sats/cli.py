@@ -78,7 +78,7 @@ def _doppler_khz(p, point):
 
 def cmd_list(args):
     for s in load_catalog():
-        freqs = " / ".join(f"{d.freq_mhz:.3f}" for d in s.downlinks)
+        freqs = " / ".join(f"{d.freq_mhz:.3f}" + (f" ({d.sstv_mode})" if d.sstv_mode else "") for d in s.downlinks)
         status = "" if s.active else "  [inactive]"
         print(f"{s.id:<10} {s.name:<20} NORAD {str(s.norad_id):<6} {freqs} MHz{status}")
         if s.notes and args.verbose:
