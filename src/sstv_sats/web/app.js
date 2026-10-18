@@ -256,7 +256,7 @@
   // What each key does in the F4HWN firmware's SSTV app (from its wiki), in table order.
   const SSTV_KEYS = [
     { id: "M", key: "M", tag: "Send logo", action: "Send the boot logo in the selected TX mode" },
-    { id: "PTT", key: "PTT", tag: "Ignored", action: "Ignored; never starts an SSTV transmission", muted: true },
+    { id: "PTT", key: "PTT", tag: "Ignored", action: "Ignored; never starts an SSTV transmission" },
     { id: "1", key: "1 / F, then 1", tag: "TX mode", action: "Select the next / previous TX mode" },
     { id: "2", key: "2", tag: "1-bit / dither", action: "Switch between 1-BIT and DITHER rendering" },
     { id: "3", key: "3", tag: "Speaker", action: "Turn the received audio speaker on/off" },
@@ -264,33 +264,26 @@
     { id: "F", key: "F", tag: "Reverse", action: "Arm or cancel the reverse direction for the next mode change" },
     { id: "EXIT", key: "EXIT", tag: "Abort / exit", action: "Abort an active TX/RX or leave the picture view; from the information screen, exit the app" },
   ];
-  // Both radios share one grid; only the arrow keys and some secondary labels differ.
-  const KEYPADS = [
-    { model: "UV-K1", up: "◀", down: "▶", subs: ["Band", "A/B", "V/M", "Scan", "FC", "WX", "H/L", "FM", "VOX", "R", "Call", "🔑"] },
-    { model: "UV-K5", up: "▲", down: "▼", subs: ["BAND", "A/B", "VFO/MR", "SCAN", "FC", "NOAA", "H/M/L", "FM", "VOX", "R", "CALL", "🔑"] },
-  ];
+  // The UV-K1 and UV-K5 share one grid; only the arrow keys differ (◀ ▶ on the K1, ▲ ▼ on the K5).
   const GRID = ["1", "2", "3", "*", "4", "5", "6", "0", "7", "8", "9", "F"];
+  const SUBS = ["BAND", "A/B", "VFO/MR", "SCAN", "FC", "NOAA/WX", "H/M/L", "FM", "VOX", "R", "CALL", "🔑"];
 
   function renderKeymap() {
     const byId = Object.fromEntries(SSTV_KEYS.map((k) => [k.id, k]));
-    const key = (id, label, sub, extra = "") => {
+    const key = (id, label, sub) => {
       const k = byId[id];
-      const cls = k ? (k.muted ? "kp-key used muted" : "kp-key used") : "kp-key";
-      return `<div class="${cls} ${extra}"${k ? ` title="${esc(k.action)}"` : ""}>
+      return `<div class="kp-key${k ? " used" : ""}"${k ? ` title="${esc(k.action)}"` : ""}>
         <span class="kp-label">${esc(label)}</span>${sub ? `<span class="kp-sub">${esc(sub)}</span>` : ""}
         ${k ? `<span class="kp-tag">${esc(k.tag)}</span>` : ""}</div>`;
     };
-    $("keypads").innerHTML = KEYPADS.map((pad) => `
-      <figure class="keypad" aria-label="${pad.model} keypad with SSTV app keys highlighted">
-        <figcaption>${pad.model}</figcaption>
-        <div class="kp-body">
-          <div class="kp-side">${key("PTT", "PTT", "", "side")}${key("S1", "SIDE1", "", "side")}${key("S2", "SIDE2", "", "side")}</div>
-          <div class="kp-grid">
-            ${key("M", "M", "MENU")}${key("UP", pad.up, "")}${key("DOWN", pad.down, "")}${key("EXIT", "EXIT", "")}
-            ${GRID.map((id, i) => key(id, id === "F" ? "F #" : id === "*" ? "✱" : id, pad.subs[i])).join("")}
-          </div>
+    $("keypads").innerHTML = `
+      <figure class="keypad" aria-label="UV-K1 / UV-K5 keypad with SSTV app keys highlighted">
+        <figcaption>UV-K1 / UV-K5</figcaption>
+        <div class="kp-grid">
+          ${key("M", "M", "MENU")}${key("UP", "◀ ▲", "K1 / K5")}${key("DOWN", "▶ ▼", "K1 / K5")}${key("EXIT", "EXIT", "")}
+          ${GRID.map((id, i) => key(id, id === "F" ? "F #" : id === "*" ? "✱" : id, SUBS[i])).join("")}
         </div>
-      </figure>`).join("");
+      </figure>`;
     $("keytable").innerHTML = SSTV_KEYS.map((k) => `<tr><td><kbd>${esc(k.key)}</kbd></td><td>${esc(k.action)}</td></tr>`).join("");
   }
 

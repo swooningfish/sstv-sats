@@ -87,27 +87,18 @@ kbd {
   border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 2px 6px; background: var(--bg);
 }
 .keypads { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
-.keypad { margin: 0; flex: 1 1 300px; max-width: 420px; background: var(--keypad); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+.keypad { margin: 0; flex: 1 1 260px; max-width: 360px; background: var(--keypad); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
 .keypad figcaption { font-weight: 700; margin-bottom: 8px; }
-.kp-body { display: flex; gap: 8px; }
-.kp-side { display: flex; flex-direction: column; gap: 6px; flex: 0 0 56px; }
-.kp-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; flex: 1; }
+.kp-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .kp-key {
   position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
   min-height: 52px; padding: 4px 2px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--muted);
 }
-.kp-key.side { min-height: 44px; }
 .kp-label { font-weight: 700; font-size: .95rem; color: var(--text); opacity: .55; }
 .kp-sub { font-size: .62rem; line-height: 1.1; opacity: .7; }
 .kp-key.used { border: 2px solid var(--accent); background: var(--key-hl); color: var(--text); }
 .kp-key.used .kp-label { opacity: 1; }
 .kp-tag { margin-top: 2px; font-size: .62rem; line-height: 1.1; font-weight: 700; color: var(--accent); }
-.kp-key.muted { border-style: dashed; border-color: var(--muted); background: transparent; }
-.kp-key.muted .kp-tag { color: var(--muted); }
 .keytable td:first-child { width: 1%; }
 .keytable td { white-space: normal; }
-@media (max-width: 480px) {
-  .kp-body { flex-direction: column; }
-  .kp-side { flex-direction: row; flex-basis: auto; }
-  .kp-side .kp-key { flex: 1; }
-}
+.keytable kbd { white-space: normal; display: inline-block; max-width: 7em; line-height: 1.3; }

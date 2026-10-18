@@ -121,7 +121,7 @@ Enter your latitude and longitude or Maidenhead locator, or click **Use my locat
 - **Enable alerts**, for a browser notification before each pass (only while the tab is open)
 - **Add to calendar (.ics)**, for reminders from your phone or computer calendar
 - download links for the CHIRP files
-- a collapsible **UV-K1 / UV-K5 SSTV app keys** panel, showing which keys do what in the F4HWN firmware's SSTV app on a picture of each keypad
+- a collapsible **UV-K1 / UV-K5 SSTV app keys** panel, showing which keys do what in the F4HWN firmware's SSTV app on a picture of the shared UV-K1 / UV-K5 keypad
 
 Everything is calculated in your browser, and your location is never sent anywhere. The site rebuilds every day with fresh orbital data.
 
