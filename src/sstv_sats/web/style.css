@@ -200,3 +200,12 @@ body.no-scroll { overflow: hidden; }
 .settings-row select { max-width: none; margin-top: 3px; padding: 7px 9px; }
 .ch { font-variant-numeric: tabular-nums; font-weight: 600; }
 .warn-text { color: var(--warn); font-weight: 600; }
+
+/* Header with the app icon at the top right */
+.site-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.header-text { min-width: 0; }
+.site-icon { width: 96px; height: 96px; flex: none; border-radius: 22px; box-shadow: 0 4px 16px rgba(0, 0, 0, .25); }
+@media (max-width: 600px) {
+  .site-icon { width: 56px; height: 56px; border-radius: 13px; }
+  .site-header { gap: 12px; }
+}
