@@ -1,0 +1,27 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[test]"
+      - run: pytest -q
+      - name: CHIRP files are up to date with satellites.json
+        shell: bash
+        run: |
+          sstv-sats chirp -o chirp/sstv_satellites_chirp.csv
+          sstv-sats chirp --doppler none -o chirp/sstv_satellites_chirp_no_doppler.csv
+          sstv-sats chirp --doppler full -o chirp/sstv_satellites_chirp_fine_doppler.csv
+          git diff --exit-code -- chirp/ || (echo "::error::Regenerate the CHIRP CSVs (see README)"; exit 1)

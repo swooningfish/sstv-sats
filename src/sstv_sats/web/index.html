@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SSTV Satellite Passes</title>
+  <meta name="description" content="Upcoming passes of amateur satellites that transmit SSTV, with alerts and CHIRP memory downloads.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%B0%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<header>
+  <h1>SSTV Satellite Passes</h1>
+  <p class="sub">When the SSTV satellites will be over you, with alerts and CHIRP memory files.</p>
+</header>
+
+<main>
+  <section class="card" id="setup">
+    <h2>Your location</h2>
+    <form id="loc-form">
+      <div class="row">
+        <label>Latitude <input id="lat" type="number" step="any" min="-90" max="90" placeholder="51.5074"></label>
+        <label>Longitude <input id="lon" type="number" step="any" min="-180" max="180" placeholder="-0.1278"></label>
+        <label>Height (m) <input id="alt" type="number" step="any" value="0"></label>
+      </div>
+      <div class="row">
+        <label>or Maidenhead locator <input id="grid" type="text" placeholder="IO91wm" maxlength="8"></label>
+        <label>Min peak elevation (°) <input id="minel" type="number" value="10" min="0" max="90"></label>
+        <label>Look ahead (hours) <input id="hours" type="number" value="24" min="1" max="168"></label>
+      </div>
+      <div class="buttons">
+        <button type="submit" class="primary">Predict passes</button>
+        <button type="button" id="geo">Use my location</button>
+      </div>
+      <p class="hint">Your location stays in this browser and is never sent anywhere.</p>
+    </form>
+  </section>
+
+  <section class="card" id="next" hidden>
+    <div class="next-head">
+      <div>
+        <div class="label">Next pass</div>
+        <div id="next-name" class="big"></div>
+        <div id="next-detail"></div>
+      </div>
+      <div class="countdown" id="countdown"></div>
+    </div>
+  </section>
+
+  <section class="card" id="results" hidden>
+    <div class="results-head">
+      <h2>Upcoming passes</h2>
+      <div class="buttons">
+        <label class="inline">Alert <input id="lead" type="number" value="10" min="1" max="120"> min before</label>
+        <button id="alerts" type="button">Enable alerts</button>
+        <button id="ics" type="button">Add to calendar (.ics)</button>
+      </div>
+    </div>
+    <p class="hint" id="alert-hint">Browser alerts only fire while this page is open. For alerts on your phone without the page open, run <code>sstv-sats watch --ntfy</code> (see the README).</p>
+    <div class="filters" id="filters"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Satellite</th><th>MHz</th><th>AOS</th><th>Max el</th><th>LOS</th><th>Length</th><th>Doppler AOS / LOS</th></tr></thead>
+        <tbody id="passes"></tbody>
+      </table>
+    </div>
+    <p class="hint" id="data-age"></p>
+  </section>
+
+  <section class="card">
+    <h2>CHIRP memory files</h2>
+    <p>Import with <em>File → Import</em> in CHIRP, then upload to your radio. On 70 cm the Doppler shift is up to ±10 kHz, so the default file adds channels 10 kHz high (use at AOS) and 10 kHz low (use at LOS) around each frequency.</p>
+    <div class="buttons">
+      <a class="button primary" href="chirp/sstv_satellites_chirp_basic.csv" download>Standard (±10 kHz)</a>
+      <a class="button" href="chirp/sstv_satellites_chirp_full.csv" download>Fine (±5 / ±10 kHz)</a>
+      <a class="button" href="chirp/sstv_satellites_chirp_none.csv" download>Centre frequency only</a>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Satellites</h2>
+    <div class="table-wrap">
+      <table><thead><tr><th>ID</th><th>Name</th><th>NORAD</th><th>Downlink MHz</th><th>Notes</th></tr></thead><tbody id="catalog"></tbody></table>
+    </div>
+  </section>
+
+  <section class="card tips">
+    <h2>Receiving tips</h2>
+    <ul>
+      <li>FM, wide filter if your radio has one. Squelch open, volume steady, and feed the audio to <b>MMSSTV</b> or <b>RX-SSTV</b> (Windows), <b>QSSTV</b> (Linux), <b>Black Cat SSTV</b> (macOS) or <b>Robot36</b> (Android).</li>
+      <li>Passes above 30° give the best pictures. A handheld Yagi beats a rubber duck by a mile.</li>
+      <li>These satellites send SSTV <em>periodically</em>, not all the time. Record the whole pass and decode it afterwards.</li>
+      <li>Satellite list from LU3FCI, Juan Carlos. 73 and good reception!</li>
+    </ul>
+  </section>
+</main>
+
+<footer>Orbital data from <a href="https://celestrak.org">CelesTrak</a> &amp; <a href="https://db.satnogs.org">SatNOGS</a>, refreshed daily. Predictions by <a href="https://github.com/shashwatak/satellite-js">satellite.js</a> (SGP4).</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

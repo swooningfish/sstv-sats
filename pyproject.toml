@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sstv-sats"
+version = "0.1.0"
+description = "Pass predictions, alerts and CHIRP memory exports for amateur satellites that transmit periodic SSTV"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = ["skyfield>=1.45"]
+keywords = ["sstv", "amateur radio", "satellite", "chirp", "ham radio", "pass prediction"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+sstv-sats = "sstv_sats.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+sstv_sats = ["satellites.json", "web/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

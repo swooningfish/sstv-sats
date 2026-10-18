@@ -1,0 +1,71 @@
+{
+  "description": "Amateur satellites with periodic SSTV transmissions. Based on the 'Satellites with periodic SSTV' list by LU3FCI (Juan Carlos); NORAD IDs checked against CelesTrak and SatNOGS DB on 2026-10-18.",
+  "updated": "2026-10-18",
+  "satellites": [
+    {
+      "id": "RS58S", "name": "Monitor 3", "short": "RS58S", "norad_id": 57180,
+      "downlinks": [{"freq_mhz": 435.290, "mode": "FM", "note": "Robot36"}]
+    },
+    {
+      "id": "RS38S", "name": "Vizard Meteo", "short": "RS38S", "norad_id": 57189,
+      "downlinks": [{"freq_mhz": 437.825, "mode": "FM", "note": "Robot72"}]
+    },
+    {
+      "id": "RS40S", "name": "Umka 1", "short": "RS40S", "norad_id": 57172,
+      "downlinks": [{"freq_mhz": 437.625, "mode": "FM"}]
+    },
+    {
+      "id": "RS49S", "name": "Nanozond 1", "short": "RS49S", "norad_id": 57190,
+      "downlinks": [{"freq_mhz": 437.000, "mode": "FM"}],
+      "active": false, "notes": "Re-entered 2026-04-20. Kept for reference; skipped unless --include-inactive."
+    },
+    {
+      "id": "RS27S", "name": "UTMN 2", "short": "RS27S", "norad_id": 57203,
+      "downlinks": [{"freq_mhz": 436.125, "mode": "FM", "note": "Robot36"}]
+    },
+    {
+      "id": "RS18S", "name": "Sakhacube Cholbon", "short": "RS18S", "norad_id": 67290,
+      "downlinks": [{"freq_mhz": 437.350, "mode": "FM"}]
+    },
+    {
+      "id": "RS95S", "name": "QMR KWT 2", "short": "RS95S", "norad_id": 67291,
+      "downlinks": [{"freq_mhz": 436.950, "mode": "FM"}]
+    },
+    {
+      "id": "RS57S", "name": "Monitor 4", "short": "RS57S", "norad_id": 57182,
+      "downlinks": [{"freq_mhz": 436.080, "mode": "FM"}],
+      "notes": "SatNOGS only lists GMSK telemetry on this frequency; SSTV is from the LU3FCI list."
+    },
+    {
+      "id": "RS90S", "name": "Luca 1", "short": "RS90S", "norad_id": 67287,
+      "downlinks": [{"freq_mhz": 437.180, "mode": "FM"}],
+      "notes": "SatNOGS only lists GMSK telemetry on this frequency; SSTV is from the LU3FCI list."
+    },
+    {
+      "id": "ISS", "name": "ISS", "short": "ISS", "norad_id": 25544,
+      "downlinks": [
+        {"freq_mhz": 145.800, "mode": "FM", "note": "ARISS SSTV events, PD120/PD180"},
+        {"freq_mhz": 437.550, "mode": "FM", "note": "Robot36"}
+      ],
+      "notes": "ARISS SSTV runs as scheduled events - check https://ariss-sstv.blogspot.com/ for dates."
+    },
+    {
+      "id": "SONATE-2", "name": "SONATE 2", "short": "SONATE2", "norad_id": 59112,
+      "downlinks": [{"freq_mhz": 145.880, "mode": "FM", "note": "Martin M1"}]
+    },
+    {
+      "id": "JAMX01", "name": "JAMX01", "short": "JAMX01", "norad_id": 98248,
+      "downlinks": [{"freq_mhz": 435.175, "mode": "FM"}],
+      "notes": "Launched 2026-08-25. 98248 is a temporary ID (TLE via SatNOGS); update when the permanent catalogue number is published."
+    },
+    {
+      "id": "IO-86", "name": "LAPAN A2", "short": "IO86", "norad_id": 40931,
+      "downlinks": [{"freq_mhz": 435.880, "mode": "FM", "note": "FM voice / SSDV"}],
+      "notes": "Near-equatorial orbit (6 deg inclination): only visible from roughly +/-20 deg latitude. TLE via SatNOGS."
+    },
+    {
+      "id": "GALAPAGOS", "name": "Galapagos UTE SWSU", "short": "GALAPG", "norad_id": 67279,
+      "downlinks": [{"freq_mhz": 437.050, "mode": "FM"}]
+    }
+  ]
+}

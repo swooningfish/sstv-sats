@@ -1,0 +1,22 @@
+# Self-hosted setup: the alert watcher plus the web app on http://localhost:8000
+# Edit the location and alert settings below, then: docker compose up -d
+services:
+  watch:
+    build: .
+    restart: unless-stopped
+    command: ["watch"]
+    environment:
+      SSTV_GRID: "IO91wm"          # or set SSTV_LAT / SSTV_LON instead
+      # SSTV_LAT: "51.5074"
+      # SSTV_LON: "-0.1278"
+      # SSTV_ALT: "30"
+      SSTV_LEAD: "10"              # minutes of warning before each pass
+      SSTV_NTFY: "change-me-to-a-private-topic"   # phone push via https://ntfy.sh app
+      # SSTV_WEBHOOK: "https://discord.com/api/webhooks/..."
+
+  web:
+    build: .
+    restart: unless-stopped
+    command: ["serve", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"

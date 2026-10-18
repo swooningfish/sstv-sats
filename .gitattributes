@@ -1,0 +1,2 @@
+# CHIRP CSVs use CRLF line endings; store them byte-for-byte.
+*.csv -text
