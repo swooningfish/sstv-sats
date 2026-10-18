@@ -15,7 +15,7 @@ from . import __version__
 CELESTRAK_URL = "https://celestrak.org/NORAD/elements/gp.php?CATNR={norad}&FORMAT=TLE"
 # Fallback for objects CelesTrak doesn't carry (new launches with temporary 98xxx IDs, etc.).
 SATNOGS_URL = "https://db.satnogs.org/api/tle/?norad_cat_id={norad}&format=json"
-USER_AGENT = f"sstv-sats/{__version__} (+https://github.com/)"
+USER_AGENT = f"sstv-sats/{__version__} (+https://github.com/swooningfish/sstv-sats)"
 DEFAULT_MAX_AGE_HOURS = 12  # CelesTrak updates a few times a day; please don't hammer it.
 
 

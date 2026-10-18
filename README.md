@@ -1,5 +1,12 @@
 # sstv-sats: SSTV satellite pass predictor and CHIRP memories
 
+[![Tests](https://github.com/swooningfish/sstv-sats/actions/workflows/ci.yml/badge.svg)](https://github.com/swooningfish/sstv-sats/actions/workflows/ci.yml)
+[![Web app](https://github.com/swooningfish/sstv-sats/actions/workflows/pages.yml/badge.svg)](https://github.com/swooningfish/sstv-sats/actions/workflows/pages.yml)
+
+### 🛰️ Open the web app: **[swooningfish.github.io/sstv-sats](https://swooningfish.github.io/sstv-sats/)**
+
+Enter your location to see when the SSTV satellites pass over you, set alerts, and download the CHIRP files. There's nothing to install.
+
 Tools for receiving slow-scan TV pictures from the amateur satellites that send **periodic SSTV**:
 
 - **CHIRP CSV files** ready to import, with Doppler-offset channels for 70 cm.
@@ -46,7 +53,7 @@ Download one of these and use **File → Import** in CHIRP:
 
 ### 2. Use the web app
 
-Open the GitHub Pages site for this repo (see [Hosting your own copy](#hosting-your-own-copy)). Enter your latitude and longitude or your Maidenhead locator, or click **Use my location**. The page shows:
+Open **[swooningfish.github.io/sstv-sats](https://swooningfish.github.io/sstv-sats/)**. Enter your latitude and longitude or your Maidenhead locator, or click **Use my location**. The page shows:
 
 - a countdown to the next pass
 - a table of passes with rise and set directions, peak elevation and Doppler
@@ -60,7 +67,7 @@ All calculations run in your browser. Your location is never sent anywhere.
 Needs Python 3.9 or newer.
 
 ```bash
-pip install git+https://github.com/YOUR-USER/sstv-sats.git
+pip install git+https://github.com/swooningfish/sstv-sats.git
 ```
 
 Or, from a clone of this repo:
@@ -128,7 +135,7 @@ Ten minutes before each pass you get a push notification with the frequency, ris
 2. In the repository go to **Settings → Pages → Build and deployment** and set **Source** to **GitHub Actions**.
 3. Push to `main`, or run the **Build & deploy web app** workflow from the Actions tab.
 
-The workflow ([`.github/workflows/pages.yml`](.github/workflows/pages.yml)) runs every day at 03:17 UTC. It downloads fresh TLEs and republishes the site, so predictions stay accurate without anyone doing anything. The site is published at `https://YOUR-USER.github.io/sstv-sats/`.
+The workflow ([`.github/workflows/pages.yml`](.github/workflows/pages.yml)) runs every day at 03:17 UTC. It downloads fresh TLEs and republishes the site, so predictions stay accurate without anyone doing anything. Your copy is published at `https://YOUR-USER.github.io/sstv-sats/`.
 
 ### Docker (watcher and web app on a Raspberry Pi or home server)
 
