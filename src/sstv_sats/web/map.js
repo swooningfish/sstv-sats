@@ -355,9 +355,10 @@
     return globeLoading;
   }
 
-  async function setView(view) {
+  // `remember` is false for the automatic fallback, so a one-off failure doesn't stick the visitor on 2D.
+  async function setView(view, remember = true) {
     st.view = view;
-    pref.set("mapView", view);
+    if (remember) pref.set("mapView", view);
     const is3d = view === "3d";
     document.querySelectorAll("#map-view button").forEach((b) => b.classList.toggle("primary", b.dataset.view === view));
     $("alt-wrap").hidden = !is3d;
@@ -371,7 +372,7 @@
         globe.resize();
       } catch (e) {
         globeLoading = null;
-        await setView("2d");
+        await setView("2d", false);
         $("map-info").textContent = `The 3D globe couldn't start in this browser (${e.message}), so you're seeing the 2D map.`;
         lastDraw = performance.now() + 4000; // keep the message up for a few seconds
         return;

@@ -47,9 +47,36 @@
     scene.add(new THREE.Mesh(new THREE.SphereGeometry(1, 128, 64), new THREE.MeshPhongMaterial({ map: texture, shininess: 6, specular: 0x111111 })));
     const atmosphere = new THREE.Mesh(new THREE.SphereGeometry(1.02, 64, 32), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.08, side: THREE.BackSide }));
     scene.add(atmosphere);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.62));
-    const sunLight = new THREE.DirectionalLight(0xffffff, 0.7); // lit side = day
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const sunLight = new THREE.DirectionalLight(0xffffff, 0.5); // gentle daylight shading
     scene.add(sunLight);
+
+    // Night side: a shell just above the surface, dark where the sun is below the horizon, with a soft
+    // twilight band and a faint line along the terminator.
+    const sunDir = new THREE.Vector3(1, 0, 0);
+    const night = new THREE.Mesh(new THREE.SphereGeometry(1.0015, 128, 64), new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      // Terminator line is pale sunset gold, distinct from the orange satellite tracks.
+      uniforms: { sunDir: { value: sunDir }, nightColor: { value: new THREE.Color(0x000814) }, darkness: { value: 0.74 }, edgeColor: { value: new THREE.Color(0xffe2a3) } },
+      vertexShader: `
+        varying vec3 vDir;
+        void main() {
+          vDir = normalize(position);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: `
+        uniform vec3 sunDir; uniform vec3 nightColor; uniform float darkness; uniform vec3 edgeColor;
+        varying vec3 vDir;
+        void main() {
+          float d = dot(normalize(vDir), sunDir);          // sine of the sun's elevation here
+          float dark = smoothstep(0.03, -0.18, d) * darkness; // day -> civil/nautical twilight -> night
+          float edge = (1.0 - smoothstep(0.0, 0.016, abs(d))) * 0.55;
+          gl_FragColor = vec4(mix(nightColor, edgeColor, edge / max(dark + edge, 0.001)), max(dark, edge));
+        }`,
+    }));
+    night.renderOrder = 1;
+    scene.add(night);
 
     const you = new THREE.Mesh(new THREE.SphereGeometry(0.012, 16, 12), new THREE.MeshBasicMaterial());
     you.visible = false;
@@ -97,6 +124,7 @@
       }
       texture.needsUpdate = true;
       atmosphere.material.color.set(c.accent);
+      night.material.uniforms.darkness.value = document.documentElement.matches("[data-theme=light]") || matchMedia("(prefers-color-scheme: light)").matches ? 0.58 : 0.74;
       you.material.color.set(c.text);
     }
 
@@ -230,6 +258,7 @@
       const date = new Date(t), gmst = satellite.gstime(date), selId = core.selectedId();
       const sun = core.sunSubpoint(t);
       vec(sun.lat, sun.lon, 10, sunLight.position);
+      vec(sun.lat, sun.lon, 1, sunDir);
 
       const labels = [], seenIds = new Set();
       screenDots = [];

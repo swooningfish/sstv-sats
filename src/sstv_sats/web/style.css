@@ -209,3 +209,4 @@ body.no-scroll { overflow: hidden; }
   .site-icon { width: 56px; height: 56px; border-radius: 13px; }
   .site-header { gap: 12px; }
 }
+.legend .night-swatch { width: 18px; height: 12px; border-radius: 3px; display: inline-block; background: linear-gradient(90deg, var(--map-land) 0 45%, #ffe2a3 45% 52%, #0a1020 52%); border: 1px solid var(--border); }

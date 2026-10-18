@@ -119,7 +119,7 @@ Enter your latitude and longitude or Maidenhead locator, or click **Use my locat
 - **Next pass:** a countdown, the frequency, the SSTV mode and where to point your antenna.
 - **Satellite map:**
   - every satellite moving in real time (Live), or sped up to 30×, 120× or 600×
-  - a **3D globe** (the default) with each satellite at its altitude (there's an option to exaggerate it ×3) and a cone showing where on the ground it can be heard, or a flat **2D map**
+  - a **3D globe** (the default) with each satellite at its altitude (there's an option to exaggerate it ×3) and a cone showing where on the ground it can be heard, or a flat **2D map**. Both shade the night side of the Earth, and the globe marks the day/night line in pale gold
   - the selected satellite's track, green where it's in range of you, and its SSTV mode when known
   - **⛶ Full screen** in either view. On a phone, turn it sideways for the biggest map. Press Esc or **Exit full screen** to go back
   - click any pass in the table to replay it on the map
