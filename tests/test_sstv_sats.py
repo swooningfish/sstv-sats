@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import pytest
 
 from sstv_sats.catalog import load_catalog, select
-from sstv_sats.chirp import HEADER, chirp_rows, to_csv
+from sstv_sats.chirp import DOPPLER_PROFILES, HEADER, chirp_layout, chirp_rows, to_csv
 from sstv_sats.ics import passes_to_ics
 from sstv_sats.location import maidenhead_to_latlon
 from sstv_sats.passes import predict_passes
@@ -63,6 +63,22 @@ def test_chirp_doppler_channels_ascend_minus_centre_plus():
     assert [r["Name"] for r in rows] == ["RS40S-10", "RS40S-5", "RS40S", "RS40S+5", "RS40S+10"]
     freqs = [float(r["Frequency"]) for r in rows]
     assert freqs == sorted(freqs)
+
+
+@pytest.mark.parametrize("profile", list(DOPPLER_PROFILES))
+def test_chirp_layout_matches_csv_rows(profile):
+    sats = select(load_catalog())
+    rows = chirp_rows(sats, doppler=profile, start=1)
+    layout = chirp_layout(sats, doppler=profile)
+    by_location = {r["Location"]: r for r in rows}
+    seen = []
+    for sat in sats:
+        for i, dl in enumerate(sat.downlinks):
+            for off, n in layout[sat.id][i]:
+                row = by_location[n + 1]
+                assert float(row["Frequency"]) == pytest.approx(dl.freq_mhz + off / 1000)
+                seen.append(n)
+    assert sorted(seen) == list(range(len(rows)))
 
 
 def test_chirp_name_length_is_respected():

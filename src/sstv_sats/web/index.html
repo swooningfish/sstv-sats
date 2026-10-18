@@ -66,6 +66,7 @@
         <div id="next-name" class="big"></div>
         <div id="next-detail"></div>
         <div id="next-mode" class="mode"></div>
+        <div id="next-channel" class="mode"></div>
       </div>
       <div class="countdown" id="countdown"></div>
     </div>
@@ -114,11 +115,25 @@
       </div>
     </div>
     <p class="hint" id="alert-hint">Browser alerts only fire while this page is open. For alerts on your phone without the page open, run <code>sstv-sats watch --ntfy</code> (see the README).</p>
+    <details class="settings" id="radio-settings">
+      <summary><span class="summary-title">Radio settings</span> <span class="small" id="settings-summary"></span></summary>
+      <div class="row settings-row">
+        <label>CHIRP file you imported
+          <select id="chirp-profile">
+            <option value="basic">Standard (±10 kHz)</option>
+            <option value="full">Fine (±5 / ±10 kHz)</option>
+            <option value="none">Centre frequency only</option>
+          </select>
+        </label>
+        <label>Imported starting at channel <input id="chirp-start" type="number" min="0" max="9999" step="1" value="1"></label>
+      </div>
+      <p class="hint">The Channel column shows which memory channels to use on each pass, in order: start on the first as the satellite rises and step down as it passes. Change these if you imported the CHIRP file somewhere other than channel 1.</p>
+    </details>
     <label class="check"><input type="checkbox" id="hide-unknown"> Hide satellites with no published SSTV mode</label>
     <div class="filters" id="filters"></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Satellite</th><th>MHz</th><th>SSTV mode</th><th>AOS</th><th>Max el</th><th>LOS</th><th>Length</th><th>Doppler AOS / LOS</th></tr></thead>
+        <thead><tr><th>Satellite</th><th>MHz</th><th title="Memory channels from the CHIRP file, in the order to use them">Channel</th><th>SSTV mode</th><th>AOS</th><th>Max el</th><th>LOS</th><th>Length</th><th>Doppler AOS / LOS</th></tr></thead>
         <tbody id="passes"></tbody>
       </table>
     </div>

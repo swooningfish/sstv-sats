@@ -13,6 +13,10 @@
 
   let catalog = [], tles = {}, passes = [], hidden = new Set(store.get("hidden", [])), notified = new Set();
   let hideUnknown = store.get("hideUnknownMode", false);
+  // Memory channels from the CHIRP file (layout written by the site build), offset by where it was imported.
+  let chirpLayout = null;
+  let chirpProfile = store.get("chirpProfile", "basic"), chirpStart = store.get("chirpStart", 1);
+  const PROFILE_NAMES = { basic: "Standard", full: "Fine", none: "Centre only" };
   let builtIn = [], baseTles = {};
   let custom = store.get("custom", []); // satellites the user added: catalog entries plus { tle: { l1, l2, fetched, source } }
   const CELESTRAK = (n) => `https://celestrak.org/NORAD/elements/gp.php?CATNR=${n}&FORMAT=TLE`;
@@ -132,6 +136,27 @@
   };
   const label = (s) => (norm(s.name).startsWith(norm(s.id)) ? s.name : `${s.id} ${s.name}`);
   const hasMode = (s) => s.downlinks.some((d) => d.sstv_mode);
+  // Per downlink: channels in the order to use them on a pass (highest frequency first, as it rises).
+  function channelsFor(s) {
+    const per = chirpLayout && chirpLayout[chirpProfile] && chirpLayout[chirpProfile][s.id];
+    if (!per) return null;
+    return per.map((list) => [...list].sort((a, b) => b[0] - a[0]).map(([off, n]) => ({ off, ch: n + chirpStart })));
+  }
+  const kHz = (off) => (off ? `${off > 0 ? "+" : "−"}${Math.abs(off)} kHz` : "centre");
+  function channelCell(s) {
+    if (!chirpLayout) return "";
+    const groups = channelsFor(s);
+    if (!groups) return '<span class="small">Not in CHIRP file</span>';
+    return groups.map((g) => {
+      const tip = g.map((c) => `${c.ch} = ${kHz(c.off)}`).join(", ");
+      return `<span class="ch" title="${esc(tip)}">${g.map((c) => c.ch).join(" → ")}</span>`;
+    }).join("<br>");
+  }
+  function channelText(s) {
+    const groups = channelsFor(s);
+    if (!groups) return "";
+    return groups.map((g, i) => (groups.length > 1 ? `${s.downlinks[i].freq_mhz.toFixed(3)}: ` : "") + g.map((c) => c.ch).join(" → ")).join(", ");
+  }
   const modeCell = (s) => s.downlinks.map((d) => (d.sstv_mode ? esc(d.sstv_mode) : '<span class="small">Not published</span>')).join("<br>");
   // A satellite is listed unless its chip is switched off, or it has no published mode and those are hidden.
   const shown = (s) => !hidden.has(s.id) && (!hideUnknown || hasMode(s));
@@ -190,13 +215,14 @@
       return `<tr class="${now_ ? "now" : ""}" data-sat="${esc(p.sat.id)}" data-aos="${+p.aos.time}" title="Replay this pass on the map">
         <td><b>${esc(label(p.sat))}</b>${now_ ? ' <span class="small">overhead now</span>' : ""}</td>
         <td>${f}</td>
+        <td>${channelCell(p.sat)}</td>
         <td>${modeCell(p.sat)}</td>
         <td>${fmtDay(p.aos.time)} <b>${fmtTime(p.aos.time)}</b> <span class="small">${compass(p.aos.az)}</span></td>
         <td class="${elCls}">${p.tca.el.toFixed(0)}° <span class="small">${compass(p.tca.az)} ${fmtTime(p.tca.time)}</span></td>
         <td>${fmtTime(p.los.time)} <span class="small">${compass(p.los.az)}</span></td>
         <td>${fmtDur(p.los.time - p.aos.time)}</td>
         <td>${sign(doppler(p.aos, f0))} / ${sign(doppler(p.los, f0))} kHz</td></tr>`;
-    }).join("") : `<tr><td colspan="8">No passes found. Try more hours or a lower minimum elevation${hideUnknown ? ", or show satellites with no published mode" : ""}.</td></tr>`;
+    }).join("") : `<tr><td colspan="9">No passes found. Try more hours or a lower minimum elevation${hideUnknown ? ", or show satellites with no published mode" : ""}.</td></tr>`;
     const oldest = Math.max(...passes.map((p) => (now - p.epoch) / 86400000), 0);
     $("data-age").textContent = `Times are your local time. ${passes.length} passes. Oldest orbital data used: ${oldest.toFixed(1)} days.`;
   }
@@ -210,6 +236,8 @@
     $("next").hidden = false;
     $("next-name").textContent = `${label(p.sat)} · ${p.sat.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / ")} MHz`;
     $("next-mode").textContent = `SSTV mode: ${modeText(p.sat)}`;
+    const chText = channelText(p.sat);
+    $("next-channel").textContent = chText ? `Radio channels: ${chText} (as it rises → as it sets)` : "";
     $("next-detail").textContent = `${fmtDay(p.aos.time)} ${fmtTime(p.aos.time)} from ${compass(p.aos.az)}, max ${p.tca.el.toFixed(0)}° ${compass(p.tca.az)}, sets ${compass(p.los.az)} at ${fmtTime(p.los.time)}`;
     const ms = p.aos.time - now;
     if (ms <= 0) $("countdown").textContent = "Overhead now";
@@ -404,11 +432,12 @@
       if (saved.hours != null) $("hours").value = saved.hours;
     }
     $("lead").value = store.get("lead", 10);
-    const [cat, tleText] = await Promise.all([
+    const [cat, tleText, layout] = await Promise.all([
       fetch("data/satellites.json").then((r) => r.json()),
       fetch("data/tle.txt").then((r) => r.text()),
+      fetch("data/chirp_layout.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
-    builtIn = cat.satellites; baseTles = parseTles(tleText);
+    builtIn = cat.satellites; baseTles = parseTles(tleText); chirpLayout = layout;
     // Drop stored satellites that have since been added to the built-in list.
     custom = custom.filter((s) => !builtIn.some((b) => b.norad_id === s.norad_id));
     updateAlertButton();
@@ -438,6 +467,23 @@
     store.set("hidden", [...hidden]);
     syncMapHidden();
     renderFilters(); renderPasses(); tick();
+  });
+  function syncRadioSettings() {
+    $("chirp-profile").value = chirpProfile;
+    $("chirp-start").value = chirpStart;
+    $("settings-summary").textContent = `${PROFILE_NAMES[chirpProfile]} CHIRP file, from channel ${chirpStart}`;
+  }
+  syncRadioSettings();
+  $("chirp-profile").addEventListener("change", (e) => {
+    chirpProfile = e.target.value; store.set("chirpProfile", chirpProfile);
+    syncRadioSettings(); renderPasses(); tick();
+  });
+  $("chirp-start").addEventListener("input", (e) => {
+    const v = parseInt(e.target.value, 10);
+    if (!(v >= 0)) return;
+    chirpStart = v; store.set("chirpStart", chirpStart);
+    $("settings-summary").textContent = `${PROFILE_NAMES[chirpProfile]} CHIRP file, from channel ${chirpStart}`;
+    renderPasses(); tick();
   });
   $("hide-unknown").checked = hideUnknown;
   $("hide-unknown").addEventListener("change", (e) => {

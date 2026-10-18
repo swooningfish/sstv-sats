@@ -9,7 +9,7 @@ from importlib import resources
 from pathlib import Path
 
 from .catalog import catalog_text, load_catalog, select
-from .chirp import DOPPLER_PROFILES, chirp_rows, to_csv
+from .chirp import DOPPLER_PROFILES, chirp_layout, chirp_rows, to_csv
 from .tle import get_tles
 
 CHIRP_FILES = {p: f"sstv_satellites_chirp_{p}.csv" for p in DOPPLER_PROFILES}
@@ -38,5 +38,8 @@ def build_site(out_dir: Path, tle_file=None, offline: bool = False) -> Path:
     )
     for profile, name in CHIRP_FILES.items():
         (out / "chirp" / name).write_bytes(to_csv(chirp_rows(select(sats), doppler=profile)).encode("utf-8"))
+    # Which memory channel each satellite lands on in each file, for the web app's Channel column.
+    layout = {profile: chirp_layout(select(sats), doppler=profile) for profile in CHIRP_FILES}
+    (out / "data" / "chirp_layout.json").write_text(json.dumps(layout, separators=(",", ":")), encoding="utf-8")
     (out / ".nojekyll").write_text("", encoding="utf-8")
     return out

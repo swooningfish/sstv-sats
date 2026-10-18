@@ -123,7 +123,7 @@ Enter your latitude and longitude or Maidenhead locator, or click **Use my locat
   - the selected satellite's track, green where it's in range of you, and its SSTV mode when known
   - **⛶ Full screen** in either view. On a phone, turn it sideways for the biggest map. Press Esc or **Exit full screen** to go back
   - click any pass in the table to replay it on the map
-- **Upcoming passes:** rise and set times, compass directions, peak elevation, SSTV mode and Doppler. Tick **Hide satellites with no published SSTV mode** to list only the satellites whose mode is known.
+- **Upcoming passes:** rise and set times, compass directions, peak elevation, SSTV mode, Doppler, and the **memory channels** to use from the CHIRP file (for example `3 → 2 → 1`: start on 3 as the satellite rises). If you imported a different CHIRP file, or started somewhere other than channel 1, set that under **Radio settings**. Tick **Hide satellites with no published SSTV mode** to list only the satellites whose mode is known.
 - **Alerts:** **Enable alerts** for a browser notification before each pass (only while the tab is open), or **Add to calendar (.ics)** for reminders from your calendar.
 - **Add a satellite:** in the Satellites section, add any satellite by NORAD number (orbital data is downloaded from CelesTrak and refreshed every 12 hours) or by pasting its TLE. Added satellites are saved in your browser only and appear in the passes and on the map.
 - **CHIRP files:** download links for the three CHIRP files. These cover the built-in satellites only.

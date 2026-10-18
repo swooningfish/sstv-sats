@@ -34,6 +34,34 @@ def _channel_name(short: str, offset_khz: int, max_len: int) -> str:
     return (short[: max(1, max_len - len(suffix))] + suffix)[:max_len]
 
 
+def _channels(sats: Iterable[Satellite], doppler: str, all_downlinks: bool, name_length: int):
+    """Yield (sat, downlink index, downlink, offset kHz, short name) in memory-channel order."""
+    profile = DOPPLER_PROFILES[doppler]
+    for sat in sats:
+        downlinks = sat.downlinks if all_downlinks else sat.downlinks[:1]
+        for i, dl in enumerate(downlinks):
+            band = "uhf" if dl.freq_mhz >= 300 else "vhf"
+            short = sat.short
+            if i:
+                short = sat.short[: max(1, name_length - 4)] + ("U" if band == "uhf" else "V")
+            for off in profile[band]:
+                yield sat, i, dl, off, short
+
+
+def chirp_layout(sats: Iterable[Satellite], doppler: str = "basic", all_downlinks: bool = True) -> dict:
+    """Where each satellite lands in the CHIRP file: {sat id: [[[offset kHz, 0-based channel], ...] per downlink]}.
+
+    The web app adds the user's first memory channel to show which channel to use on each pass.
+    """
+    layout: dict = {}
+    for n, (sat, i, _dl, off, _short) in enumerate(_channels(sats, doppler, all_downlinks, 8)):
+        per_dl = layout.setdefault(sat.id, [])
+        while len(per_dl) <= i:
+            per_dl.append([])
+        per_dl[i].append([off, n])
+    return layout
+
+
 def chirp_rows(
     sats: Iterable[Satellite],
     doppler: str = "basic",
@@ -41,45 +69,37 @@ def chirp_rows(
     name_length: int = 8,
     all_downlinks: bool = True,
 ) -> list:
-    profile = DOPPLER_PROFILES[doppler]
     rows = []
     loc = start
-    for sat in sats:
-        downlinks = sat.downlinks if all_downlinks else sat.downlinks[:1]
-        for dl in downlinks:
-            band = "uhf" if dl.freq_mhz >= 300 else "vhf"
-            short = sat.short
-            if len(downlinks) > 1 and dl is not downlinks[0]:
-                short = sat.short[: max(1, name_length - 4)] + ("U" if band == "uhf" else "V")
-            for off in profile[band]:
-                freq = dl.freq_mhz + off / 1000.0
-                comment = f"{sat.label} SSTV RX"
-                if off:
-                    comment += f" Doppler {off:+d}kHz ({'AOS' if off > 0 else 'LOS'})"
-                if dl.sstv_mode:
-                    comment += f" - {dl.sstv_mode}"
-                if dl.note:
-                    comment += f" - {dl.note}"
-                rows.append({
-                    "Location": loc,
-                    "Name": _channel_name(short, off, name_length),
-                    "Frequency": f"{freq:.6f}",
-                    "Duplex": "",
-                    "Offset": "0.000000",
-                    "Tone": "",
-                    "rToneFreq": "88.5",
-                    "cToneFreq": "88.5",
-                    "DtcsCode": "023",
-                    "DtcsPolarity": "NN",
-                    "RxDtcsCode": "023",
-                    "CrossMode": "Tone->Tone",
-                    "Mode": dl.mode,
-                    "TStep": "5.00",
-                    "Skip": "",
-                    "Comment": comment,
-                    "URCALL": "", "RPT1CALL": "", "RPT2CALL": "", "DVCODE": "",
-                })
-                loc += 1
+    for sat, _i, dl, off, short in _channels(sats, doppler, all_downlinks, name_length):
+        freq = dl.freq_mhz + off / 1000.0
+        comment = f"{sat.label} SSTV RX"
+        if off:
+            comment += f" Doppler {off:+d}kHz ({'AOS' if off > 0 else 'LOS'})"
+        if dl.sstv_mode:
+            comment += f" - {dl.sstv_mode}"
+        if dl.note:
+            comment += f" - {dl.note}"
+        rows.append({
+            "Location": loc,
+            "Name": _channel_name(short, off, name_length),
+            "Frequency": f"{freq:.6f}",
+            "Duplex": "",
+            "Offset": "0.000000",
+            "Tone": "",
+            "rToneFreq": "88.5",
+            "cToneFreq": "88.5",
+            "DtcsCode": "023",
+            "DtcsPolarity": "NN",
+            "RxDtcsCode": "023",
+            "CrossMode": "Tone->Tone",
+            "Mode": dl.mode,
+            "TStep": "5.00",
+            "Skip": "",
+            "Comment": comment,
+            "URCALL": "", "RPT1CALL": "", "RPT2CALL": "", "DVCODE": "",
+        })
+        loc += 1
     return rows
 
 

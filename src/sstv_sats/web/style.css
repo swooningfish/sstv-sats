@@ -189,3 +189,13 @@ body.no-scroll { overflow: hidden; }
 /* CSV download buttons */
 .button.download { display: inline-flex; align-items: center; gap: 8px; }
 .file-icon { width: 24px; height: 24px; flex: none; color: var(--accent); }
+
+/* Radio settings and channel column */
+.settings { margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.settings summary { cursor: pointer; list-style: none; padding-left: 1.4em; position: relative; }
+.settings summary::-webkit-details-marker { display: none; }
+.settings summary::before { content: "▸"; position: absolute; left: 0; top: 0; color: var(--accent); display: inline-block; transition: transform .15s; }
+.settings[open] summary::before { transform: rotate(90deg); }
+.settings-row { margin: 12px 0 0; }
+.settings-row select { max-width: none; margin-top: 3px; padding: 7px 9px; }
+.ch { font-variant-numeric: tabular-nums; font-weight: 600; }
