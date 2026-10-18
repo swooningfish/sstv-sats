@@ -93,7 +93,7 @@ def cmd_chirp(args):
     if args.output == "-":
         sys.stdout.write(text)
     else:
-        Path(args.output).write_text(text, encoding="utf-8", newline="")
+        Path(args.output).write_bytes(text.encode("utf-8"))
         print(f"wrote {len(rows)} channels to {args.output}", file=sys.stderr)
 
 
@@ -127,7 +127,7 @@ def cmd_ics(args):
     from .ics import passes_to_ics
 
     passes, _ = _predict(args)
-    Path(args.output).write_text(passes_to_ics(passes, args.alarm), encoding="utf-8", newline="")
+    Path(args.output).write_bytes(passes_to_ics(passes, args.alarm).encode("utf-8"))
     print(f"wrote {len(passes)} passes to {args.output}", file=sys.stderr)
 
 

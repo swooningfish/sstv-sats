@@ -37,6 +37,6 @@ def build_site(out_dir: Path, tle_file=None, offline: bool = False) -> Path:
         encoding="utf-8",
     )
     for profile, name in CHIRP_FILES.items():
-        (out / "chirp" / name).write_text(to_csv(chirp_rows(select(sats), doppler=profile)), encoding="utf-8", newline="")
+        (out / "chirp" / name).write_bytes(to_csv(chirp_rows(select(sats), doppler=profile)).encode("utf-8"))
     (out / ".nojekyll").write_text("", encoding="utf-8")
     return out
