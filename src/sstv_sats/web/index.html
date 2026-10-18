@@ -6,7 +6,9 @@
   <title>SSTV Satellite Passes</title>
   <meta name="description" content="Catch slow-scan TV pictures from amateur satellites: pass predictions for your location, a live satellite map, alerts, and CHIRP memory files for your radio.">
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%B0%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0d1320">
 </head>
 <body>
 <header>
@@ -111,10 +113,11 @@
       <div class="buttons">
         <label class="inline">Alert <input id="lead" type="number" value="10" min="1" max="120"> min before</label>
         <button id="alerts" type="button">Enable alerts</button>
+        <button id="alert-test" type="button" class="link" hidden>Send a test alert</button>
         <button id="ics" type="button">Add to calendar (.ics)</button>
       </div>
     </div>
-    <p class="hint" id="alert-hint">Browser alerts only fire while this page is open. For alerts on your phone without the page open, run <code>sstv-sats watch --ntfy</code> (see the README).</p>
+    <p class="hint" id="alert-hint">Alerts come before each pass and again when the satellite rises, but only while this page is open (on a phone, keep it on screen). On iPhone, add this page to your Home Screen first. When the page is closed, use <b>Add to calendar</b> or <code>sstv-sats watch --ntfy</code> (see the README). <span id="alert-status" class="warn-text" role="status"></span></p>
     <details class="settings" id="radio-settings">
       <summary><span class="summary-title">Radio settings</span> <span class="small" id="settings-summary"></span></summary>
       <div class="row settings-row">

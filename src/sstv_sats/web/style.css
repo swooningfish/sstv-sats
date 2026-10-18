@@ -199,3 +199,4 @@ body.no-scroll { overflow: hidden; }
 .settings-row { margin: 12px 0 0; }
 .settings-row select { max-width: none; margin-top: 3px; padding: 7px 9px; }
 .ch { font-variant-numeric: tabular-nums; font-weight: 600; }
+.warn-text { color: var(--warn); font-weight: 600; }

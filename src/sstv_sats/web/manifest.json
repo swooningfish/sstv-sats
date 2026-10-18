@@ -1,0 +1,13 @@
+{
+  "name": "SSTV Satellite Passes",
+  "short_name": "SSTV Passes",
+  "description": "Pass predictions, alerts, a live map and CHIRP memory files for amateur satellites that send SSTV pictures.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d1320",
+  "theme_color": "#0d1320",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

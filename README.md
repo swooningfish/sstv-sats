@@ -124,7 +124,7 @@ Enter your latitude and longitude or Maidenhead locator, or click **Use my locat
   - **⛶ Full screen** in either view. On a phone, turn it sideways for the biggest map. Press Esc or **Exit full screen** to go back
   - click any pass in the table to replay it on the map
 - **Upcoming passes:** rise and set times, compass directions, peak elevation, SSTV mode, Doppler, and the **memory channels** to use from the CHIRP file (for example `3 → 2 → 1`: start on 3 as the satellite rises). If you imported a different CHIRP file, or started somewhere other than channel 1, set that under **Radio settings**. Tick **Hide satellites with no published SSTV mode** to list only the satellites whose mode is known.
-- **Alerts:** **Enable alerts** for a browser notification before each pass (only while the tab is open), or **Add to calendar (.ics)** for reminders from your calendar.
+- **Alerts:** **Enable alerts** for a browser notification before each pass and again when the satellite rises (only while the page is open), with a **Send a test alert** button to check it works. Or use **Add to calendar (.ics)** for reminders from your calendar.
 - **Add a satellite:** in the Satellites section, add any satellite by NORAD number (orbital data is downloaded from CelesTrak and refreshed every 12 hours) or by pasting its TLE. Added satellites are saved in your browser only and appear in the passes and on the map.
 - **CHIRP files:** download links for the three CHIRP files. These cover the built-in satellites only.
 - **UV-K1 / UV-K5 SSTV app keys:** a collapsible panel showing which keys do what in the F4HWN firmware's SSTV app.
@@ -203,7 +203,7 @@ Run any command with `--help` to see all its options.
 
 | Method | Works when | How |
 |---|---|---|
-| Browser notification | The web app tab is open | Click **Enable alerts** in the web app |
+| Browser notification | The web app is open (on a phone, on screen) | Click **Enable alerts** in the web app. You get one alert before the pass and another when the satellite rises. On iPhone, add the site to your Home Screen first |
 | Calendar reminder | Always | **Add to calendar** in the web app, or `sstv-sats ics` |
 | Phone push (ntfy) | A computer is running `watch` | See below |
 | Discord or Slack | A computer is running `watch` | `--webhook <url>` |

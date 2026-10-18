@@ -11,7 +11,8 @@
     set(k, v) { try { localStorage.setItem("sstv." + k, JSON.stringify(v)); } catch { /* storage unavailable */ } },
   };
 
-  let catalog = [], tles = {}, passes = [], hidden = new Set(store.get("hidden", [])), notified = new Set();
+  let catalog = [], tles = {}, passes = [], hidden = new Set(store.get("hidden", []));
+  const notified = new Set(store.get("notified", []));
   let hideUnknown = store.get("hideUnknownMode", false);
   // Memory channels from the CHIRP file (layout written by the site build), offset by where it was imported.
   let chirpLayout = null;
@@ -245,25 +246,61 @@
       const s = Math.floor(ms / 1000);
       $("countdown").textContent = (s >= 3600 ? `${Math.floor(s / 3600)}:` : "") + `${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
     }
-    if (store.get("alerts", false) && "Notification" in window && Notification.permission === "granted") {
-      const lead = (parseFloat($("lead").value) || 10) * 60000;
-      for (const q of upcoming) {
-        const key = `${q.sat.id}@${+q.aos.time}`, until = q.aos.time - now;
-        if (until > 0 && until <= lead && !notified.has(key)) {
-          notified.add(key);
-          new Notification(`SSTV pass: ${label(q.sat)} in ${Math.round(until / 60000)} min`, {
-            body: `${q.sat.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / ")} MHz, SSTV ${modeText(q.sat)}. Rises ${compass(q.aos.az)} at ${fmtTime(q.aos.time)}, max ${q.tca.el.toFixed(0)}°`,
-            tag: key,
-          });
-        }
+    if (alertsOn()) checkAlerts(upcoming, now);
+  }
+
+  // ---------- alerts ----------
+  // Android Chrome (and iPhone home-screen web apps) only show notifications through a service worker,
+  // so register one and fall back to `new Notification()` elsewhere.
+  const swReady = "serviceWorker" in navigator
+    ? navigator.serviceWorker.register("sw.js").then(() => navigator.serviceWorker.ready).catch(() => null)
+    : Promise.resolve(null);
+  const alertsOn = () => store.get("alerts", false) && "Notification" in window && Notification.permission === "granted";
+
+  async function notify(title, body, tag) {
+    try {
+      const reg = await Promise.race([swReady, new Promise((r) => setTimeout(() => r(null), 3000))]);
+      if (reg && reg.showNotification) await reg.showNotification(title, { body, tag, icon: "icon.svg", badge: "icon.svg", renotify: true });
+      else new Notification(title, { body, tag, icon: "icon.svg" });
+      $("alert-status").textContent = "";
+      return true;
+    } catch (e) {
+      console.warn("Couldn't show the alert:", e);
+      $("alert-status").textContent = `Your browser didn't show the alert (${e.message}).`;
+      return false;
+    }
+  }
+
+  function markNotified(key) {
+    notified.add(key);
+    store.set("notified", [...notified].slice(-300));
+  }
+
+  // One alert `lead` minutes before AOS, and another when the satellite rises (or straight away if it's already up).
+  function checkAlerts(upcoming, now) {
+    const lead = (parseFloat($("lead").value) || 10) * 60000;
+    for (const q of upcoming) {
+      const key = `${q.sat.id}@${+q.aos.time}`, until = q.aos.time - now;
+      const freqs = `${q.sat.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / ")} MHz`;
+      const ch = channelText(q.sat) ? `, channels ${channelText(q.sat)}` : "";
+      if (until > 0 && until <= lead && !notified.has(key)) {
+        markNotified(key);
+        notify(`SSTV pass: ${label(q.sat)} in ${Math.max(1, Math.round(until / 60000))} min`,
+          `${freqs}${ch}. SSTV ${modeText(q.sat)}. Rises ${compass(q.aos.az)} at ${fmtTime(q.aos.time)}, max ${q.tca.el.toFixed(0)}° ${compass(q.tca.az)}.`, key);
+      }
+      if (until <= 0 && q.los.time > now && !notified.has(key + ":up")) {
+        markNotified(key); markNotified(key + ":up");
+        notify(`${label(q.sat)} is overhead now`,
+          `Listen on ${freqs}${ch}. SSTV ${modeText(q.sat)}. Highest ${q.tca.el.toFixed(0)}° ${compass(q.tca.az)} at ${fmtTime(q.tca.time)}, sets ${compass(q.los.az)} at ${fmtTime(q.los.time)}.`, key + ":up");
       }
     }
   }
 
   function updateAlertButton() {
-    const on = store.get("alerts", false) && "Notification" in window && Notification.permission === "granted";
-    $("alerts").textContent = on ? "Alerts on ✓" : "Enable alerts";
+    const on = alertsOn(), blocked = "Notification" in window && Notification.permission === "denied";
+    $("alerts").textContent = on ? "Alerts on ✓" : blocked ? "Alerts blocked" : "Enable alerts";
     $("alerts").classList.toggle("primary", on);
+    $("alert-test").hidden = !on;
   }
 
   function icsDate(d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }
@@ -493,12 +530,20 @@
     renderFilters(); renderPasses(); tick();
   });
   $("alerts").addEventListener("click", async () => {
-    if (!("Notification" in window)) return alert("This browser doesn't support notifications");
-    if (store.get("alerts", false) && Notification.permission === "granted") { store.set("alerts", false); return updateAlertButton(); }
+    if (!("Notification" in window)) return alert("This browser can't show notifications. On iPhone or iPad, tap Share → Add to Home Screen, open the site from there, and turn alerts on again.");
+    if (alertsOn()) { store.set("alerts", false); return updateAlertButton(); }
     const perm = await Notification.requestPermission();
     store.set("alerts", perm === "granted");
-    if (perm !== "granted") alert("Notifications were blocked. Allow them in your browser's site settings.");
     updateAlertButton();
+    if (perm !== "granted") return alert("Notifications are blocked for this site. Allow them in your browser's site settings, then try again.");
+    const lead = Math.round(parseFloat($("lead").value) || 10);
+    notify("SSTV alerts are on", `You'll get an alert ${lead} min before each pass and again when the satellite rises, while this page is open.`, "sstv-alerts-on");
+    tick();
+  });
+  $("alert-test").addEventListener("click", () => {
+    const next = visible().find((p) => p.los.time > Date.now());
+    notify("Test alert from SSTV Satellite Passes",
+      next ? `Next pass: ${label(next.sat)} at ${fmtTime(next.aos.time)}, ${next.sat.downlinks[0].freq_mhz.toFixed(3)} MHz.` : "Alerts are working.", "sstv-test");
   });
   $("lead").addEventListener("change", () => store.set("lead", parseFloat($("lead").value) || 10));
   $("ics").addEventListener("click", downloadIcs);
