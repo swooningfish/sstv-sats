@@ -118,6 +118,13 @@
   const fmtDur = (ms) => `${Math.floor(ms / 60000)}:${pad(Math.round((ms % 60000) / 1000))}`;
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const norm = (x) => x.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  // "Robot 36", or per frequency when a satellite has several downlinks.
+  const modeText = (s) => {
+    const known = s.downlinks.filter((d) => d.sstv_mode);
+    if (!known.length) return "not published (your decoder will auto-detect it)";
+    if (s.downlinks.length === 1) return known[0].sstv_mode;
+    return s.downlinks.map((d) => `${d.sstv_mode || "unknown"} on ${d.freq_mhz.toFixed(3)}`).join(", ");
+  };
   const label = (s) => (norm(s.name).startsWith(norm(s.id)) ? s.name : `${s.id} ${s.name}`);
 
   // ---------- UI ----------
@@ -186,6 +193,7 @@
     const p = upcoming[0];
     $("next").hidden = false;
     $("next-name").textContent = `${label(p.sat)} · ${p.sat.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / ")} MHz`;
+    $("next-mode").textContent = `SSTV mode: ${modeText(p.sat)}`;
     $("next-detail").textContent = `${fmtDay(p.aos.time)} ${fmtTime(p.aos.time)} from ${compass(p.aos.az)}, max ${p.tca.el.toFixed(0)}° ${compass(p.tca.az)}, sets ${compass(p.los.az)} at ${fmtTime(p.los.time)}`;
     const ms = p.aos.time - now;
     if (ms <= 0) $("countdown").textContent = "Overhead now";
@@ -200,7 +208,7 @@
         if (until > 0 && until <= lead && !notified.has(key)) {
           notified.add(key);
           new Notification(`SSTV pass: ${label(q.sat)} in ${Math.round(until / 60000)} min`, {
-            body: `${q.sat.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / ")} MHz. Rises ${compass(q.aos.az)} at ${fmtTime(q.aos.time)}, max ${q.tca.el.toFixed(0)}°`,
+            body: `${q.sat.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / ")} MHz, SSTV ${modeText(q.sat)}. Rises ${compass(q.aos.az)} at ${fmtTime(q.aos.time)}, max ${q.tca.el.toFixed(0)}°`,
             tag: key,
           });
         }

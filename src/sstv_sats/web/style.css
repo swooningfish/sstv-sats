@@ -63,6 +63,7 @@ tr.now td { background: var(--row-hl); }
 .next-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .label { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
 .big { font-size: 1.4rem; font-weight: 700; }
+.mode { margin-top: 4px; font-weight: 600; }
 .countdown { font-size: 2rem; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
 .tips ul { margin: 0; padding-left: 20px; }
 footer { color: var(--muted); font-size: .8rem; padding-bottom: 30px; }
