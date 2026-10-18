@@ -248,7 +248,7 @@
         const isSel = s.id === selId;
         if (isSel) sel = s;
         const seen = updateSat(s, o, p, isSel);
-        if (isSel || seen) labels.push({ text: s.label, pos: o.dot.position.clone(), strong: true });
+        if (isSel || seen) labels.push({ text: core.satText(s), pos: o.dot.position.clone(), strong: true });
         if (!occluded(o.dot.position)) screenDots.push({ id: s.id, ...toScreen(o.dot.position) });
       }
       for (const [id, o] of objs) if (!seenIds.has(id)) setVisible(o, false); // removed satellites
@@ -261,7 +261,9 @@
     function resize() {
       const w = container.clientWidth;
       if (!w) return;
-      const h = Math.round(Math.min(Math.max(w * 0.72, 300), 560));
+      const full = container.closest(".is-full");
+      const h = full ? container.parentElement.clientHeight : Math.round(Math.min(Math.max(w * 0.72, 300), 560));
+      if (!h) return;
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
@@ -277,7 +279,9 @@
       for (const d of screenDots) { const dd = (d.x - x) ** 2 + (d.y - y) ** 2; if (dd < bd) { bd = dd; best = d.id; } }
       if (best) core.select(best);
     });
-    new ResizeObserver(resize).observe(container);
+    const ro = new ResizeObserver(resize);
+    ro.observe(container);
+    ro.observe(container.parentElement); // full-screen changes the space available
     resize();
     return { render, resize };
   }

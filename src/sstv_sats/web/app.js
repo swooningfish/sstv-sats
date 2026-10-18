@@ -288,6 +288,7 @@
     if (window.SstvMap) {
       SstvMap.setSatellites(catalog.filter((s) => s.active !== false && tles[s.norad_id]).map((s) => ({
         id: s.id, label: label(s), freq: s.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / "),
+        mode: [...new Set(s.downlinks.map((d) => d.sstv_mode).filter(Boolean))].join(" / "),
         l1: tles[s.norad_id].l1, l2: tles[s.norad_id].l2,
       })));
       syncMapHidden();

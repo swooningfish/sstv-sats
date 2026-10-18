@@ -28,7 +28,7 @@
     lastReal: performance.now(),
     land: null,
     track: null,      // cached ground track { id, from, pts }
-    view: pref.get("mapView", "2d"),
+    view: pref.get("mapView", "3d"),
     altScale: pref.get("altScale", 1),
   };
   let canvas, ctx, landCanvas, W = 0, H = 0, dpr = 1, landKey = "", lastDraw = 0, dots = [];
@@ -41,6 +41,7 @@
   const Y = (lat) => ((90 - lat) / 180) * H;
   const COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
   const compass = (az) => COMPASS[Math.round(az / 22.5) % 16];
+  const satText = (s) => (s.mode ? `${s.label} · ${s.mode}` : s.label); // map label, with the SSTV mode when known
 
   // Longitudes relative to the map centre, unwrapped so consecutive points never jump by more than 180°.
   function unwrap(pts) {
@@ -263,7 +264,7 @@
       ctx.beginPath(); ctx.arc(x, y, isSel ? 6 : 4.5, 0, 2 * Math.PI);
       ctx.fillStyle = seen ? c.good : isSel ? c.warn : c.accent; ctx.fill();
       ctx.lineWidth = isSel ? 2.5 : 1.5; ctx.strokeStyle = isSel ? c.text : c.card; ctx.stroke();
-      if (isSel || seen || id === st.hover) label(s.label, x, y, c, isSel || seen);
+      if (isSel || seen || id === st.hover) label(satText(s), x, y, c, isSel || seen);
     }
     updateStatus(sel, sel && now.get(sel.id), date);
   }
@@ -274,7 +275,7 @@
     $("map-clock").textContent = st.speed === 1 ? `Live · ${time}` : `Map time ${time} · ${st.speed}× speed`;
     let info = "";
     if (sel && p) {
-      info = `${sel.label} · ${sel.freq} MHz · ${Math.round(p.h)} km up · `;
+      info = `${sel.label} · ${sel.freq} MHz · SSTV ${sel.mode || "mode not published"} · ${Math.round(p.h)} km up · `;
       if (!st.obs) info += "set your location to see when it's in range";
       else if (p.el > 0) info += `in range now: ${p.el.toFixed(0)}° elevation, ${compass(p.az)}`;
       else info += `below your horizon, ${Math.round(p.range).toLocaleString()} km away`;
@@ -309,8 +310,11 @@
   function resize() {
     const wrap = canvas.parentElement;
     W = Math.round(wrap.clientWidth); H = Math.round(W / 2);
+    // Full screen: the map gets whatever height is left, so fit the 2:1 map inside it.
+    if (isFull() && wrap.clientHeight && H > wrap.clientHeight) { H = Math.round(wrap.clientHeight); W = H * 2; }
     dpr = window.devicePixelRatio || 1;
     canvas.width = W * dpr; canvas.height = H * dpr;
+    canvas.style.width = W + "px";
     canvas.style.height = H + "px";
     landKey = "";
     redraw();
@@ -376,9 +380,36 @@
     redraw();
   }
 
+  // ---------- full screen ----------
+  // Uses the Fullscreen API where it exists; otherwise (e.g. iPhone Safari) the panel just fills the window.
+  const isFull = () => $("map-card").classList.contains("is-full");
+
+  function setFull(on) {
+    const card = $("map-card");
+    if (on === isFull()) return;
+    card.classList.toggle("is-full", on);
+    document.body.classList.toggle("no-scroll", on);
+    $("map-full").textContent = on ? "✕ Exit full screen" : "⛶ Full screen";
+    $("map-full").setAttribute("aria-pressed", String(on));
+    const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+    if (on && !fsEl) {
+      const req = card.requestFullscreen || card.webkitRequestFullscreen;
+      if (req) Promise.resolve(req.call(card)).catch(() => { /* window-filling fallback stays */ });
+    } else if (!on && fsEl) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) Promise.resolve(exit.call(document)).catch(() => {});
+    }
+    if (globe) globe.resize();
+    redraw();
+  }
+
+  function onFullscreenChange() {
+    if (!(document.fullscreenElement || document.webkitFullscreenElement)) setFull(false);
+  }
+
   // What globe.js needs from the shared map state.
   const core = {
-    st, satAt, footprintDeg, sunSubpoint, colors, selectedId,
+    st, satAt, footprintDeg, sunSubpoint, colors, selectedId, satText,
     select(id) { st.pick = id; $("map-sat").value = id; redraw(); },
   };
 
@@ -405,6 +436,10 @@
     $("alt-exag").addEventListener("change", (ev) => { st.altScale = ev.target.checked ? 3 : 1; pref.set("altScale", st.altScale); });
     setSpeed(st.speed);
     setView(st.view);
+    $("map-full").addEventListener("click", () => setFull(!isFull()));
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") setFull(false); });
     fetch(LAND_URL).then((r) => r.json()).then((topo) => {
       st.land = topoPolygons(topo, topo.objects.land);
       landKey = ""; redraw();

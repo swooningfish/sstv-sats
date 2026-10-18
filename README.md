@@ -119,8 +119,9 @@ Enter your latitude and longitude or Maidenhead locator, or click **Use my locat
 - **Next pass:** a countdown, the frequency, the SSTV mode and where to point your antenna.
 - **Satellite map:**
   - every satellite moving in real time (Live), or sped up to 30×, 120× or 600×
-  - a **2D map**, or a **3D globe** with each satellite at its altitude (there's an option to exaggerate it ×3) and a cone showing where on the ground it can be heard
-  - the selected satellite's track, green where it's in range of you
+  - a **3D globe** (the default) with each satellite at its altitude (there's an option to exaggerate it ×3) and a cone showing where on the ground it can be heard, or a flat **2D map**
+  - the selected satellite's track, green where it's in range of you, and its SSTV mode when known
+  - **⛶ Full screen** in either view. On a phone, turn it sideways for the biggest map. Press Esc or **Exit full screen** to go back
   - click any pass in the table to replay it on the map
 - **Upcoming passes:** rise and set times, compass directions, peak elevation, SSTV mode and Doppler. Tick **Hide satellites with no published SSTV mode** to list only the satellites whose mode is known.
 - **Alerts:** **Enable alerts** for a browser notification before each pass (only while the tab is open), or **Add to calendar (.ics)** for reminders from your calendar.
