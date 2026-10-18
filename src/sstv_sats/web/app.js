@@ -12,6 +12,11 @@
   };
 
   let catalog = [], tles = {}, passes = [], hidden = new Set(store.get("hidden", [])), notified = new Set();
+  let hideUnknown = store.get("hideUnknownMode", false);
+  let builtIn = [], baseTles = {};
+  let custom = store.get("custom", []); // satellites the user added: catalog entries plus { tle: { l1, l2, fetched, source } }
+  const CELESTRAK = (n) => `https://celestrak.org/NORAD/elements/gp.php?CATNR=${n}&FORMAT=TLE`;
+  const TLE_MAX_AGE_MS = 12 * 3600000;
 
   // ---------- data ----------
   function parseTles(text) {
@@ -126,6 +131,10 @@
     return s.downlinks.map((d) => `${d.sstv_mode || "unknown"} on ${d.freq_mhz.toFixed(3)}`).join(", ");
   };
   const label = (s) => (norm(s.name).startsWith(norm(s.id)) ? s.name : `${s.id} ${s.name}`);
+  const hasMode = (s) => s.downlinks.some((d) => d.sstv_mode);
+  const modeCell = (s) => s.downlinks.map((d) => (d.sstv_mode ? esc(d.sstv_mode) : '<span class="small">Not published</span>')).join("<br>");
+  // A satellite is listed unless its chip is switched off, or it has no published mode and those are hidden.
+  const shown = (s) => !hidden.has(s.id) && (!hideUnknown || hasMode(s));
 
   // ---------- UI ----------
   function readLocation() {
@@ -157,10 +166,14 @@
     renderFilters(); renderPasses(); tick();
   }
 
-  function visible() { return passes.filter((p) => !hidden.has(p.sat.id)); }
+  function visible() { return passes.filter((p) => shown(p.sat)); }
+
+  function syncMapHidden() {
+    if (window.SstvMap) SstvMap.setHidden(catalog.filter((s) => !shown(s)).map((s) => s.id));
+  }
 
   function renderFilters() {
-    const ids = [...new Set(passes.map((p) => p.sat.id))];
+    const ids = [...new Set(passes.filter((p) => !hideUnknown || hasMode(p.sat)).map((p) => p.sat.id))];
     $("filters").innerHTML = ids.map((id) => {
       const s = catalog.find((x) => x.id === id);
       return `<button type="button" class="chip ${hidden.has(id) ? "off" : ""}" data-id="${esc(id)}">${esc(label(s))}</button>`;
@@ -177,12 +190,13 @@
       return `<tr class="${now_ ? "now" : ""}" data-sat="${esc(p.sat.id)}" data-aos="${+p.aos.time}" title="Replay this pass on the map">
         <td><b>${esc(label(p.sat))}</b>${now_ ? ' <span class="small">overhead now</span>' : ""}</td>
         <td>${f}</td>
+        <td>${modeCell(p.sat)}</td>
         <td>${fmtDay(p.aos.time)} <b>${fmtTime(p.aos.time)}</b> <span class="small">${compass(p.aos.az)}</span></td>
         <td class="${elCls}">${p.tca.el.toFixed(0)}° <span class="small">${compass(p.tca.az)} ${fmtTime(p.tca.time)}</span></td>
         <td>${fmtTime(p.los.time)} <span class="small">${compass(p.los.az)}</span></td>
         <td>${fmtDur(p.los.time - p.aos.time)}</td>
         <td>${sign(doppler(p.aos, f0))} / ${sign(doppler(p.los, f0))} kHz</td></tr>`;
-    }).join("") : `<tr><td colspan="7">No passes found. Try more hours or a lower minimum elevation.</td></tr>`;
+    }).join("") : `<tr><td colspan="8">No passes found. Try more hours or a lower minimum elevation${hideUnknown ? ", or show satellites with no published mode" : ""}.</td></tr>`;
     const oldest = Math.max(...passes.map((p) => (now - p.epoch) / 86400000), 0);
     $("data-age").textContent = `Times are your local time. ${passes.length} passes. Oldest orbital data used: ${oldest.toFixed(1)} days.`;
   }
@@ -190,7 +204,7 @@
   function tick() {
     const now = Date.now();
     const upcoming = visible().filter((p) => p.los.time > now);
-    if (!upcoming.length) { $("next").hidden = true; return; }
+    if (!upcoming.length) { $("next").hidden = true; if (window.SstvMap) SstvMap.setAuto(null); return; }
     const p = upcoming[0];
     if (window.SstvMap) SstvMap.setAuto(p.sat.id);
     $("next").hidden = false;
@@ -247,11 +261,102 @@
     $("catalog").innerHTML = catalog.map((s) => {
       const has = !!tles[s.norad_id];
       const note = s.active === false ? `Inactive. ${s.notes || ""}` : (has ? "" : "No current orbital data. ") + (s.notes || "");
+      if (s.custom) {
+        const age = has ? ((Date.now() - tleEpoch(tles[s.norad_id].l1)) / 86400000).toFixed(1) : "?";
+        return `<tr class="custom"><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${s.norad_id ?? ""}</td>
+          <td>${s.downlinks.map((d) => d.freq_mhz.toFixed(3)).join("<br>")}</td><td>${modeCell(s)}</td>
+          <td class="notes">Added by you. Orbital data ${age} days old (${esc(s.tle.source)}).
+            <button type="button" class="link" data-remove="${esc(s.id)}">Remove</button></td></tr>`;
+      }
       return `<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${s.norad_id ?? ""}</td>
         <td>${s.downlinks.map((d) => d.freq_mhz.toFixed(3) + (d.note ? ` <span class="small">${esc(d.note)}</span>` : "")).join("<br>")}</td>
-        <td>${s.downlinks.map((d) => (d.sstv_mode ? esc(d.sstv_mode) : '<span class="small">Not published</span>')).join("<br>")}</td>
+        <td>${modeCell(s)}</td>
         <td class="notes">${esc(note)}</td></tr>`;
     }).join("");
+  }
+
+  // ---------- satellites added by the user (browser storage) ----------
+  function mergeCatalog() {
+    catalog = [...builtIn, ...custom];
+    tles = { ...baseTles };
+    for (const s of custom) tles[s.norad_id] = { l1: s.tle.l1, l2: s.tle.l2, name: s.name };
+  }
+
+  function refreshSatellites() {
+    mergeCatalog();
+    renderCatalog();
+    if (window.SstvMap) {
+      SstvMap.setSatellites(catalog.filter((s) => s.active !== false && tles[s.norad_id]).map((s) => ({
+        id: s.id, label: label(s), freq: s.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / "),
+        l1: tles[s.norad_id].l1, l2: tles[s.norad_id].l2,
+      })));
+      syncMapHidden();
+      $("map-card").hidden = false;
+    }
+    const saved = store.get("loc", null);
+    if (saved && saved.lat && saved.lon) run();
+  }
+
+  async function fetchTle(norad) {
+    const r = await fetch(CELESTRAK(norad));
+    if (!r.ok) return null;
+    return parseTles(await r.text())[norad] || null;
+  }
+
+  async function addSatellite(e) {
+    e.preventDefault();
+    const status = (msg) => { $("add-status").textContent = msg; };
+    const name = $("add-name").value.trim(), freq = parseFloat($("add-freq").value), mode = $("add-mode").value;
+    let norad = parseInt($("add-norad").value, 10) || null;
+    const pasted = $("add-tle").value.trim();
+    if (!name || !(freq > 0)) return status("Enter a name and a downlink frequency.");
+    let tle = null, source = "";
+    if (pasted) {
+      const parsed = parseTles(pasted), ids = Object.keys(parsed).map(Number);
+      if (!ids.length) return status("Those don't look like TLE lines. Paste the two lines starting with 1 and 2.");
+      if (norad && !parsed[norad]) return status(`The TLE is for NORAD ${ids[0]}, not ${norad}.`);
+      norad = norad || ids[0];
+      tle = parsed[norad]; source = "pasted";
+    } else {
+      if (!norad) return status("Enter a NORAD number, or paste the TLE lines.");
+      status("Downloading orbital data from CelesTrak…");
+      try { tle = await fetchTle(norad); } catch { tle = null; }
+      if (!tle) return status(`CelesTrak has no data for NORAD ${norad}. Paste the TLE lines instead (SatNOGS DB lists them for most amateur satellites).`);
+      source = "CelesTrak";
+    }
+    if (catalog.some((s) => s.norad_id === norad)) return status(`NORAD ${norad} is already in the list.`);
+    let id = norm(name).slice(0, 10) || `SAT${norad}`;
+    if (catalog.some((s) => s.id === id)) id = `${id.slice(0, 6)}${norad}`;
+    custom.push({
+      id, name, short: id.slice(0, 8), norad_id: norad, custom: true,
+      downlinks: [{ freq_mhz: freq, mode: "FM", sstv_mode: mode }],
+      tle: { l1: tle.l1, l2: tle.l2, fetched: Date.now(), source },
+    });
+    store.set("custom", custom);
+    $("add-form").reset();
+    status(`Added ${name}.`);
+    refreshSatellites();
+  }
+
+  function removeSatellite(id) {
+    const s = custom.find((x) => x.id === id);
+    if (!s || !confirm(`Remove ${s.name} from this browser?`)) return;
+    custom = custom.filter((x) => x.id !== id);
+    store.set("custom", custom);
+    refreshSatellites();
+  }
+
+  // Keep downloaded elements fresh; pasted ones are left alone.
+  async function refreshCustomTles() {
+    let changed = false;
+    for (const s of custom) {
+      if (s.tle.source !== "CelesTrak" || Date.now() - s.tle.fetched < TLE_MAX_AGE_MS) continue;
+      try {
+        const t = await fetchTle(s.norad_id);
+        if (t) { s.tle = { ...s.tle, l1: t.l1, l2: t.l2, fetched: Date.now() }; changed = true; }
+      } catch { /* keep the old elements */ }
+    }
+    if (changed) { store.set("custom", custom); refreshSatellites(); }
   }
 
   // ---------- UV-K1 / UV-K5 SSTV app key map ----------
@@ -302,17 +407,12 @@
       fetch("data/satellites.json").then((r) => r.json()),
       fetch("data/tle.txt").then((r) => r.text()),
     ]);
-    catalog = cat.satellites; tles = parseTles(tleText);
-    renderCatalog(); updateAlertButton();
-    if (window.SstvMap) {
-      SstvMap.setSatellites(catalog.filter((s) => s.active !== false && tles[s.norad_id]).map((s) => ({
-        id: s.id, label: label(s), freq: s.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / "),
-        l1: tles[s.norad_id].l1, l2: tles[s.norad_id].l2,
-      })));
-      SstvMap.setHidden(hidden);
-      $("map-card").hidden = false;
-    }
-    if (saved && saved.lat && saved.lon) run();
+    builtIn = cat.satellites; baseTles = parseTles(tleText);
+    // Drop stored satellites that have since been added to the built-in list.
+    custom = custom.filter((s) => !builtIn.some((b) => b.norad_id === s.norad_id));
+    updateAlertButton();
+    refreshSatellites();
+    refreshCustomTles();
   }
 
   renderKeymap();
@@ -335,7 +435,14 @@
     if (!id) return;
     hidden.has(id) ? hidden.delete(id) : hidden.add(id);
     store.set("hidden", [...hidden]);
-    if (window.SstvMap) SstvMap.setHidden(hidden);
+    syncMapHidden();
+    renderFilters(); renderPasses(); tick();
+  });
+  $("hide-unknown").checked = hideUnknown;
+  $("hide-unknown").addEventListener("change", (e) => {
+    hideUnknown = e.target.checked;
+    store.set("hideUnknownMode", hideUnknown);
+    syncMapHidden();
     renderFilters(); renderPasses(); tick();
   });
   $("alerts").addEventListener("click", async () => {
@@ -348,6 +455,8 @@
   });
   $("lead").addEventListener("change", () => store.set("lead", parseFloat($("lead").value) || 10));
   $("ics").addEventListener("click", downloadIcs);
+  $("add-form").addEventListener("submit", addSatellite);
+  $("catalog").addEventListener("click", (e) => { const id = e.target.dataset && e.target.dataset.remove; if (id) removeSatellite(id); });
   $("passes").addEventListener("click", (e) => {
     const row = e.target.closest("tr[data-sat]");
     if (!row || !window.SstvMap) return;

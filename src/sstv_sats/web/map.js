@@ -1,5 +1,6 @@
 /* World map of the SSTV satellites: positions (live or sped up), ground track, footprint and day/night,
-   centred on the observer. Exposes window.SstvMap for app.js. Uses satellite.js (SGP4). */
+   centred on the observer, plus an optional 3D globe (globe.js + three.js, loaded on demand).
+   Exposes window.SstvMap for app.js. Uses satellite.js (SGP4). */
 (() => {
   "use strict";
   const DEG = Math.PI / 180;
@@ -7,6 +8,12 @@
   const LAND_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-110m.json";
   const TRACK_BACK_MIN = 10, TRACK_AHEAD_MIN = 100;
   const OFFSETS = [-720, -360, 0, 360, 720]; // draw wrapped shapes on every copy of the map
+  const THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js";
+  const ORBIT_URL = "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js";
+  const pref = {
+    get(k, d) { try { const v = localStorage.getItem("sstv." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem("sstv." + k, JSON.stringify(v)); } catch { /* storage unavailable */ } },
+  };
   const $ = (id) => document.getElementById(id);
 
   const st = {
@@ -16,13 +23,16 @@
     pick: "auto",     // satellite id, or "auto" = follow the next pass
     autoId: null,
     hover: null,
-    speed: 30,
+    speed: 1,
     simT: Date.now(),
     lastReal: performance.now(),
     land: null,
     track: null,      // cached ground track { id, from, pts }
+    view: pref.get("mapView", "2d"),
+    altScale: pref.get("altScale", 1),
   };
   let canvas, ctx, landCanvas, W = 0, H = 0, dpr = 1, landKey = "", lastDraw = 0, dots = [];
+  let globe = null, globeLoading = null, lastStatus = 0;
 
   // ---------- geometry ----------
   const norm = (l) => ((((l + 180) % 360) + 360) % 360) - 180;
@@ -277,8 +287,19 @@
     requestAnimationFrame(frame);
     const dt = nowMs - st.lastReal;
     st.lastReal = nowMs;
-    if (document.hidden || !W || !st.sats.length) return;
+    if (document.hidden || !st.sats.length) return;
     st.simT = st.speed === 1 ? Date.now() : st.simT + dt * st.speed;
+    if (st.view === "3d") {
+      if (!globe) return;
+      globe.render(st.simT); // every frame, so dragging the globe stays smooth
+      if (nowMs - lastStatus > 250) {
+        lastStatus = nowMs;
+        const date = new Date(st.simT), sel = st.sats.find((s) => s.id === selectedId());
+        updateStatus(sel, sel && satAt(sel, date, satellite.gstime(date)), date);
+      }
+      return;
+    }
+    if (!W) return;
     if (nowMs - lastDraw < (st.speed === 1 ? 1000 : 50)) return;
     lastDraw = nowMs;
     draw();
@@ -309,6 +330,58 @@
     redraw();
   }
 
+  // ---------- 2D map / 3D globe switch ----------
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src; s.onload = resolve; s.onerror = () => reject(new Error(`couldn't load ${src.split("/").pop()}`));
+      document.head.appendChild(s);
+    });
+  }
+
+  function ensureGlobe() {
+    if (globe) return Promise.resolve(globe);
+    globeLoading = globeLoading || (async () => {
+      if (!window.THREE) await loadScript(THREE_URL);
+      if (!THREE.OrbitControls) await loadScript(ORBIT_URL);
+      if (!window.SstvGlobe) await loadScript("globe.js");
+      globe = SstvGlobe.create($("globe"), core);
+      return globe;
+    })();
+    return globeLoading;
+  }
+
+  async function setView(view) {
+    st.view = view;
+    pref.set("mapView", view);
+    const is3d = view === "3d";
+    document.querySelectorAll("#map-view button").forEach((b) => b.classList.toggle("primary", b.dataset.view === view));
+    $("alt-wrap").hidden = !is3d;
+    $("globe-hint").hidden = !is3d;
+    canvas.hidden = is3d;
+    $("globe").hidden = !is3d;
+    if (is3d) {
+      $("map-info").textContent = "Loading the 3D globe…";
+      try {
+        await ensureGlobe();
+        globe.resize();
+      } catch (e) {
+        globeLoading = null;
+        await setView("2d");
+        $("map-info").textContent = `The 3D globe couldn't start in this browser (${e.message}), so you're seeing the 2D map.`;
+        lastDraw = performance.now() + 4000; // keep the message up for a few seconds
+        return;
+      }
+    }
+    redraw();
+  }
+
+  // What globe.js needs from the shared map state.
+  const core = {
+    st, satAt, footprintDeg, sunSubpoint, colors, selectedId,
+    select(id) { st.pick = id; $("map-sat").value = id; redraw(); },
+  };
+
   function fillSelect() {
     const sel = $("map-sat");
     sel.innerHTML = `<option value="auto">Next pass (auto)</option>` +
@@ -327,7 +400,11 @@
     canvas.addEventListener("click", (ev) => { const id = nearest(ev); if (id) { st.pick = id; $("map-sat").value = id; redraw(); } });
     $("map-sat").addEventListener("change", (ev) => { st.pick = ev.target.value; redraw(); });
     $("map-speed").addEventListener("click", (ev) => { const s = ev.target.dataset && ev.target.dataset.speed; if (s) setSpeed(+s); });
+    $("map-view").addEventListener("click", (ev) => { const v = ev.target.dataset && ev.target.dataset.view; if (v && v !== st.view) setView(v); });
+    $("alt-exag").checked = st.altScale > 1;
+    $("alt-exag").addEventListener("change", (ev) => { st.altScale = ev.target.checked ? 3 : 1; pref.set("altScale", st.altScale); });
     setSpeed(st.speed);
+    setView(st.view);
     fetch(LAND_URL).then((r) => r.json()).then((topo) => {
       st.land = topoPolygons(topo, topo.objects.land);
       landKey = ""; redraw();
@@ -338,6 +415,8 @@
   window.SstvMap = {
     setSatellites(list) {
       st.sats = list.map((s) => ({ ...s, satrec: satellite.twoline2satrec(s.l1, s.l2) }));
+      if (st.pick !== "auto" && !st.sats.some((s) => s.id === st.pick)) st.pick = "auto";
+      st.track = null;
       fillSelect(); redraw();
     },
     setObserver(lat, lon, altKm) {

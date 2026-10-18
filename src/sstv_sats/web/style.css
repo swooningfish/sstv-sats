@@ -131,3 +131,38 @@ select { font: inherit; color: var(--text); background: var(--bg); border: 1px s
 #map-card label.inline select { min-width: 0; flex: 1 1 auto; }
 #passes tr[data-sat] { cursor: pointer; }
 #passes tr[data-sat]:hover td { background: var(--row-hl); }
+
+.check { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; color: var(--text); font-size: .9rem; margin-top: 12px; cursor: pointer; }
+.check input { margin: 0; width: 16px; height: 16px; accent-color: var(--accent); }
+
+/* Add-a-satellite form */
+.add-sat { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
+.add-sat summary { cursor: pointer; list-style: none; padding-left: 1.4em; position: relative; }
+.add-sat summary::-webkit-details-marker { display: none; }
+.add-sat summary::before { content: "▸"; position: absolute; left: 0; top: 0; color: var(--accent); display: inline-block; transition: transform .15s; }
+.add-sat[open] summary::before { transform: rotate(90deg); }
+.add-form { margin-top: 12px; }
+.add-form > label { margin-bottom: 12px; }
+.add-form select { max-width: none; margin-top: 3px; padding: 7px 9px; }
+textarea { font: .8rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; margin-top: 3px; resize: vertical; width: 100%; }
+button.link { border: 0; padding: 0; background: none; color: var(--accent); text-decoration: underline; font-size: inherit; }
+tr.custom td { background: var(--row-hl); }
+
+.sub { max-width: 70ch; }
+footer .repo { font-size: .9rem; margin: 0 0 6px; }
+footer .repo a { color: var(--accent); font-weight: 600; }
+
+/* 3D globe */
+[hidden] { display: none !important; }
+#globe { position: relative; background: radial-gradient(circle at 50% 45%, var(--card), var(--bg)); touch-action: none; }
+#globe canvas { display: block; cursor: grab; }
+#globe canvas:active { cursor: grabbing; }
+.globe-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.globe-label {
+  position: absolute; left: 0; top: 0; white-space: nowrap; font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--muted); background: var(--card); opacity: .9; padding: 1px 5px; border-radius: 4px;
+}
+.globe-label.strong { color: var(--text); font-weight: 700; }
+.map-3d-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+.map-3d-row .check { margin-top: 8px; }
+.map-3d-row .small { margin-top: 8px; }

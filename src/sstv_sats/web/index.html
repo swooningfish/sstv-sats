@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SSTV Satellite Passes</title>
-  <meta name="description" content="Upcoming passes of amateur satellites that transmit SSTV, with alerts and CHIRP memory downloads.">
+  <meta name="description" content="Catch slow-scan TV pictures from amateur satellites: pass predictions for your location, a live satellite map, alerts, and CHIRP memory files for your radio.">
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%B0%3C/text%3E%3C/svg%3E">
 </head>
 <body>
 <header>
   <h1>SSTV Satellite Passes</h1>
-  <p class="sub">When the SSTV satellites will be over you, with alerts and CHIRP memory files.</p>
+  <p class="sub">Several amateur satellites, including the ISS, send slow-scan TV (SSTV) pictures you can receive with an ordinary FM radio. Enter your location to see when each one passes overhead, follow them on a live map or 3D globe, get an alert before they arrive, and load their frequencies into your radio with CHIRP.</p>
 </header>
 
 <main>
@@ -75,13 +75,19 @@
     <div class="results-head">
       <h2>Satellite map</h2>
       <div class="buttons">
+        <div class="seg" id="map-view" role="group" aria-label="Map view">
+          <button type="button" data-view="2d">2D map</button><button type="button" data-view="3d">3D globe</button>
+        </div>
         <label class="inline">Track <select id="map-sat"></select></label>
         <div class="seg" id="map-speed" role="group" aria-label="Map speed">
           <button type="button" data-speed="1">Live</button><button type="button" data-speed="30">30×</button><button type="button" data-speed="120">120×</button><button type="button" data-speed="600">600×</button>
         </div>
       </div>
     </div>
-    <div class="map-wrap"><canvas id="map" role="img" aria-label="World map showing where each SSTV satellite is, centred on your location"></canvas></div>
+    <div class="map-wrap">
+      <canvas id="map" role="img" aria-label="World map showing where each SSTV satellite is, centred on your location"></canvas>
+      <div id="globe" hidden role="img" aria-label="3D globe showing each SSTV satellite at its altitude, with its radio coverage cone"></div>
+    </div>
     <div class="map-status"><b id="map-clock"></b><span id="map-info"></span></div>
     <div class="legend">
       <span><i class="dot" style="background: var(--accent)"></i>Satellite</span>
@@ -90,6 +96,10 @@
       <span><i class="line thick" style="background: var(--good)"></i>Track while in range</span>
       <span><i class="ring" style="border-color: var(--warn)"></i>Area that can hear it</span>
       <span><i class="ring dashed"></i>Your range (500 km altitude)</span>
+    </div>
+    <div class="map-3d-row">
+      <span class="small" id="globe-hint" hidden>3D: drag to turn the globe, scroll or pinch to zoom. Each cone shows where on the ground a satellite can be heard. Click a satellite to track it.</span>
+      <label class="check" id="alt-wrap" hidden><input type="checkbox" id="alt-exag"> Exaggerate altitude ×3</label>
     </div>
   </section>
 
@@ -103,10 +113,11 @@
       </div>
     </div>
     <p class="hint" id="alert-hint">Browser alerts only fire while this page is open. For alerts on your phone without the page open, run <code>sstv-sats watch --ntfy</code> (see the README).</p>
+    <label class="check"><input type="checkbox" id="hide-unknown"> Hide satellites with no published SSTV mode</label>
     <div class="filters" id="filters"></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Satellite</th><th>MHz</th><th>AOS</th><th>Max el</th><th>LOS</th><th>Length</th><th>Doppler AOS / LOS</th></tr></thead>
+        <thead><tr><th>Satellite</th><th>MHz</th><th>SSTV mode</th><th>AOS</th><th>Max el</th><th>LOS</th><th>Length</th><th>Doppler AOS / LOS</th></tr></thead>
         <tbody id="passes"></tbody>
       </table>
     </div>
@@ -124,11 +135,32 @@
     </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="satellites">
     <h2>Satellites</h2>
     <div class="table-wrap">
       <table><thead><tr><th>ID</th><th>Name</th><th>NORAD</th><th>Downlink MHz</th><th>SSTV mode</th><th>Notes</th></tr></thead><tbody id="catalog"></tbody></table>
     </div>
+    <details class="add-sat" id="add-sat">
+      <summary><span class="summary-title">Add a satellite</span> <span class="small">saved in this browser only</span></summary>
+      <form id="add-form" class="add-form" autocomplete="off">
+        <div class="row">
+          <label>Name <input id="add-name" type="text" maxlength="40" placeholder="My Cubesat" required></label>
+          <label>NORAD number <input id="add-norad" type="number" min="1" max="999999" placeholder="12345"></label>
+        </div>
+        <div class="row">
+          <label>Downlink (MHz) <input id="add-freq" type="number" step="0.001" min="20" max="3000" placeholder="437.500" required></label>
+          <label>SSTV mode <select id="add-mode"><option value="">Not published</option><option>Robot 36</option><option>Robot 72</option><option>Martin M1</option><option>Martin M2</option><option>Scottie S1</option><option>Scottie S2</option><option>Scottie DX</option><option>PD50</option><option>PD90</option><option>PD120</option><option>PD160</option><option>PD180</option><option>PD240</option><option>PD290</option></select></label>
+        </div>
+        <label>Orbital elements (TLE), optional
+          <textarea id="add-tle" rows="3" spellcheck="false" placeholder="Leave blank to download from CelesTrak by NORAD number, or paste the two TLE lines (for example from SatNOGS DB)."></textarea>
+        </label>
+        <div class="buttons">
+          <button type="submit" class="primary" id="add-submit">Add satellite</button>
+          <span class="small" id="add-status" role="status"></span>
+        </div>
+      </form>
+      <p class="hint">Added satellites appear in the passes, the map and this table, but only in this browser. They aren't in the CHIRP files. Orbital elements downloaded from CelesTrak are refreshed every 12 hours. Pasted elements are used as they are, so paste fresh ones every week or two.</p>
+    </details>
   </section>
 
   <section class="card tips">
@@ -144,7 +176,10 @@
   </section>
 </main>
 
-<footer>Orbital data from <a href="https://celestrak.org">CelesTrak</a> &amp; <a href="https://db.satnogs.org">SatNOGS</a>, refreshed daily. Predictions by <a href="https://github.com/shashwatak/satellite-js">satellite.js</a> (SGP4). Map data from <a href="https://www.naturalearthdata.com/">Natural Earth</a>.</footer>
+<footer>
+  <p class="repo"><a href="https://github.com/swooningfish/sstv-sats">sstv-sats on GitHub</a>: source code, README, the command-line tool and the satellite list. Corrections and new satellites are welcome.</p>
+  Orbital data from <a href="https://celestrak.org">CelesTrak</a> &amp; <a href="https://db.satnogs.org">SatNOGS</a>, refreshed daily. Predictions by <a href="https://github.com/shashwatak/satellite-js">satellite.js</a> (SGP4). Map data from <a href="https://www.naturalearthdata.com/">Natural Earth</a>.
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
 <script src="map.js"></script>
