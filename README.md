@@ -233,16 +233,6 @@ To keep `watch` running on a Raspberry Pi or home server, use [Docker](#docker).
 
 ## Hosting your own copy
 
-### GitHub Pages
-
-Free, with no server to run.
-
-1. Fork this repository.
-2. Go to **Settings → Pages** and set **Source** to **GitHub Actions**. Don't configure either of the suggested workflows.
-3. Go to the **Actions** tab and run **Build & deploy web app**.
-
-Your copy appears at `https://YOUR-USER.github.io/sstv-sats/` and rebuilds every day at 03:17 UTC with fresh orbital data.
-
 ### Docker
 
 Runs the alert watcher and the web app on a Raspberry Pi or home server.
@@ -259,7 +249,7 @@ This starts two containers:
 - `watch` sends alerts before every pass.
 - `web` serves the web app on port 8000.
 
-### Any other web server
+### Any web server
 
 ```bash
 sstv-sats build-site -o _site
