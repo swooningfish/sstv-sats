@@ -185,3 +185,7 @@ body.no-scroll { overflow: hidden; }
   #map-card.is-full .map-status { font-size: .8rem; gap: 2px 12px; }
   #map-card.is-full .map-3d-row .check { margin-top: 4px; }
 }
+
+/* CSV download buttons */
+.button.download { display: inline-flex; align-items: center; gap: 8px; }
+.file-icon { width: 24px; height: 24px; flex: none; color: var(--accent); }
