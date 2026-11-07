@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sstv-stats.xrmx.com/sitemap.xml
