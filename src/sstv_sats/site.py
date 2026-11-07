@@ -32,6 +32,11 @@ def build_site(out_dir: Path, tle_file=None, offline: bool = False) -> Path:
     tles = get_tles([s.norad_id for s in select(sats)], tle_file=tle_file, offline=offline)
     tle_text = "".join(f"{name}\n{l1}\n{l2}\n" for name, l1, l2 in tles.values())
     (out / "data" / "tle.txt").write_text(tle_text, encoding="utf-8")
+    # ARISS SSTV events, read from ariss.org at build time (the page has no CORS headers for browsers).
+    from .ariss import get_events
+
+    ariss = get_events(offline=offline)
+    (out / "data" / "ariss.json").write_text(json.dumps(ariss, indent=1), encoding="utf-8")
     (out / "data" / "build.json").write_text(
         json.dumps({"built": datetime.now(timezone.utc).isoformat(timespec="seconds"), "tle_count": len(tles)}),
         encoding="utf-8",

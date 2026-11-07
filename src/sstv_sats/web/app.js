@@ -22,6 +22,10 @@
   let custom = store.get("custom", []); // satellites the user added: catalog entries plus { tle: { l1, l2, fetched, source } }
   const CELESTRAK = (n) => `https://celestrak.org/NORAD/elements/gp.php?CATNR=${n}&FORMAT=TLE`;
   const TLE_MAX_AGE_MS = 12 * 3600000;
+  const MAX_WINDOW_MS = 10 * 86400000;
+  // ARISS SSTV events (data/ariss.json, read from ariss.org by the site build), and the one the
+  // pass list is narrowed to after "Show passes during this event".
+  let ariss = null, focus = null, lastWindow = null;
 
   // ---------- data ----------
   function parseTles(text) {
@@ -174,14 +178,39 @@
     return { lat, lon, alt };
   }
 
+  // datetime-local inputs hold local time as "YYYY-MM-DDTHH:MM".
+  const toLocalInput = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  const fromLocalInput = (v) => (v ? new Date(v).getTime() : NaN);
+
+  // The optional From/To window, or null to look ahead from now.
+  function readWindow() {
+    const a = $("win-start").value, b = $("win-end").value;
+    if (!a && !b) return null;
+    const start = a ? fromLocalInput(a) : Date.now(), end = fromLocalInput(b);
+    if (!b || !(end > start)) throw new Error("Set the time window's To after its From (or clear both).");
+    if (end - start > MAX_WINDOW_MS) throw new Error("The time window can be at most 10 days.");
+    return { start, end };
+  }
+
+  function syncWindowUi() {
+    const on = !!($("win-start").value || $("win-end").value);
+    $("hours").disabled = on;
+    $("hours").title = on ? "The time window below is used instead" : "";
+    $("win-clear").hidden = !on;
+  }
+
   function run() {
-    let loc;
-    try { loc = readLocation(); } catch (e) { alert(e.message); return; }
-    const minEl = parseFloat($("minel").value) || 0, hours = Math.min(168, parseFloat($("hours").value) || 24);
-    store.set("loc", { lat: $("lat").value, lon: $("lon").value, alt: $("alt").value, grid: $("grid").value, minel: minEl, hours });
+    let loc, win;
+    try { loc = readLocation(); win = readWindow(); } catch (e) { alert(e.message); return; }
+    const minEl = parseFloat($("minel").value) || 0;
+    const ahead = Math.min(168, parseFloat($("hours").value) || 24);
+    store.set("loc", { lat: $("lat").value, lon: $("lon").value, alt: $("alt").value, grid: $("grid").value, minel: minEl, hours: ahead });
+    store.set("window", win ? { start: $("win-start").value, end: $("win-end").value } : null);
     const obs = { latitude: loc.lat * DEG, longitude: loc.lon * DEG, height: loc.alt / 1000 };
     if (window.SstvMap) SstvMap.setObserver(loc.lat, loc.lon, loc.alt / 1000);
-    const start = Date.now();
+    const start = win ? win.start : Date.now();
+    const hours = win ? (win.end - win.start) / 3600000 : ahead;
+    lastWindow = win;
     passes = [];
     for (const sat of catalog) {
       if (sat.active === false || !tles[sat.norad_id]) continue;
@@ -192,13 +221,125 @@
     renderFilters(); renderPasses(); tick();
   }
 
-  function visible() { return passes.filter((p) => shown(p.sat)); }
+  function visible() {
+    if (focus) return passes.filter((p) => p.sat.id === focus.satellite_id && overlaps(p, focus));
+    return passes.filter((p) => shown(p.sat));
+  }
+
+  // ---------- ARISS SSTV events ----------
+  const evStart = (e) => Date.parse(e.start);
+  // No end date yet: assume a day. Times still TBD are whole UTC days (set by the build).
+  const evEnd = (e) => (e.end ? Date.parse(e.end) : evStart(e) + 86400000);
+  const evStatus = (e, now = Date.now()) => (now < evStart(e) ? "upcoming" : now <= evEnd(e) ? "active" : "ended");
+  const overlaps = (p, e) => p.los.time >= evStart(e) && p.aos.time <= evEnd(e);
+  // The ARISS event a pass falls in, if any.
+  const eventFor = (p) => (ariss ? ariss.events.find((e) => e.satellite_id === p.sat.id && overlaps(p, e)) : null);
+  const evName = (e) => (e.series ? `ARISS Series ${e.series}` : "ARISS SSTV");
+  const evSummary = (e) => [e.freq_mhz ? `${e.freq_mhz.toFixed(3)} MHz` : "", e.sstv_mode, e.schedule].filter(Boolean).join(", ");
+  const fmtDate = (d) => d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  const fmtUtc = (d) => `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
+
+  function fmtUntil(ms) {
+    const m = Math.round(ms / 60000), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60);
+    return d ? `${d} d ${h} h` : h ? `${h} h ${m % 60} min` : `${Math.max(1, m)} min`;
+  }
+
+  // "Mon 9 Nov 2026, time TBD" or "Thu 22 Oct 2026 15:30 UTC (16:30 your time)".
+  function evWhen(iso, known) {
+    if (!iso) return '<span class="small">Not announced yet</span>';
+    const d = new Date(iso);
+    if (!known) return `${esc(d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }))} <span class="small">time TBD</span>`;
+    return `${esc(fmtDate(d))} <b>${fmtUtc(d)}</b> <span class="small">(${fmtTime(d)} your time)</span>`;
+  }
+
+  function eventCard(e, now) {
+    const st = evStatus(e, now);
+    const badge = st === "active" ? '<span class="badge live">On now</span>'
+      : st === "upcoming" ? `<span class="badge soon">${e.start_time_known ? `Starts in ${fmtUntil(evStart(e) - now)}`
+        : `Starts ${esc(new Date(e.start).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }))}`}</span>`
+      : '<span class="badge">Ended</span>';
+    const sat = catalog.find((s) => s.id === e.satellite_id);
+    const satName = sat ? label(sat) : e.satellite;
+    const heading = e.theme ? esc(e.theme) : esc(e.title);
+    const facts = [
+      ["Start", evWhen(e.start, e.start_time_known)],
+      ["End", evWhen(e.end, e.end_time_known)],
+      ["Frequency", e.freq_mhz ? `<b>${e.freq_mhz.toFixed(3)} MHz FM</b> <span class="small">adjust for Doppler</span>` : '<span class="small">Not announced yet</span>'],
+      ["SSTV mode", e.sstv_mode ? `<b>${esc(e.sstv_mode)}</b>` : '<span class="small">Not announced yet</span>'],
+      ["Schedule", e.schedule ? esc(e.schedule) : '<span class="small">Not announced yet</span>'],
+      ["Satellite", esc(satName) + (e.norad_id ? ` <span class="small">NORAD ${e.norad_id}</span>` : "")],
+    ];
+    const pauses = (e.pauses || []).length
+      ? `<ul class="ariss-pauses">${e.pauses.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>` : "";
+    const submit = e.submit_url
+      ? `<p class="ariss-submit">Submit your decoded pictures to the <a href="${esc(e.submit_url)}" target="_blank" rel="noopener">ARISS SSTV Gallery</a>${e.certificate ? ". Original decodes qualify for the official event certificate." : "."}</p>` : "";
+    const actions = st === "ended" ? "" : `<div class="buttons">
+        <button type="button" class="primary" data-ev-passes="${esc(e.id)}">Show ${esc(satName)} passes during this event</button>
+        <button type="button" data-ev-ics="${esc(e.id)}">Add event to calendar (.ics)</button></div>`;
+    return `<article class="ariss-ev ${st}">
+      <div class="ariss-top"><div>
+        <div class="label">${esc(evName(e))}</div>
+        <h3>${heading}</h3>${e.theme ? `<div class="small">${esc(e.title)}</div>` : ""}
+      </div>${badge}</div>
+      <dl class="ariss-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+      ${pauses}${submit}${actions}
+    </article>`;
+  }
+
+  function renderAriss() {
+    if (!ariss) return;
+    const now = Date.now();
+    const live = ariss.events.filter((e) => evStatus(e, now) !== "ended").sort((a, b) => evStart(a) - evStart(b));
+    const past = ariss.events.filter((e) => evStatus(e, now) === "ended" && now - evEnd(e) < 120 * 86400000).slice(0, 3);
+    $("ariss").hidden = false;
+    $("ariss-list").innerHTML = live.length ? live.map((e) => eventCard(e, now)).join("")
+      : '<p class="ariss-none">No ARISS SSTV event is announced right now. Events are usually announced a week or two ahead.</p>';
+    $("ariss-past").hidden = !past.length;
+    $("ariss-past-count").textContent = past.length ? `last ${past.length}` : "";
+    $("ariss-past-list").innerHTML = past.map((e) => eventCard(e, now)).join("");
+    $("ariss-checked").textContent = ariss.fetched ? `Checked ${fmtDay(new Date(ariss.fetched))} ${fmtTime(new Date(ariss.fetched))}` : "";
+  }
+
+  function showEventPasses(id) {
+    const e = ariss && ariss.events.find((x) => x.id === id);
+    if (!e) return;
+    try { readLocation(); } catch {
+      alert("Enter your location first, then press the button again.");
+      $("setup").scrollIntoView({ behavior: "smooth", block: "start" });
+      return $("lat").focus();
+    }
+    const start = Math.max(evStart(e), Date.now()), end = Math.min(evEnd(e), start + MAX_WINDOW_MS);
+    $("win-start").value = toLocalInput(start);
+    $("win-end").value = toLocalInput(Math.ceil(end / 60000) * 60000);
+    syncWindowUi();
+    focus = e;
+    run();
+    $("results").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function downloadEventIcs(id) {
+    const e = ariss && ariss.events.find((x) => x.id === id);
+    if (!e) return;
+    const desc = [evSummary(e), e.submit_url ? `Submit decodes: ${e.submit_url}` : "", `Schedule: ${e.source_url}`].filter(Boolean).join("\\n");
+    const text = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//sstv-sats//web//EN", "BEGIN:VEVENT",
+      `UID:${e.id}@sstv-sats`, `DTSTAMP:${icsDate(new Date())}`, `DTSTART:${icsDate(new Date(evStart(e)))}`, `DTEND:${icsDate(new Date(evEnd(e)))}`,
+      `SUMMARY:${evName(e)} SSTV from the ${e.satellite}${e.theme ? ` - ${e.theme}` : ""}`, `DESCRIPTION:${desc}`, `URL:${e.source_url}`,
+      "END:VEVENT", "END:VCALENDAR", ""].join("\r\n");
+    saveFile(text, `${e.id}.ics`);
+  }
+
+  function renderFocus() {
+    $("focus-bar").hidden = !focus;
+    if (!focus) return;
+    $("focus-text").innerHTML = `Showing only ${esc(focus.satellite)} passes during <b>${esc(evName(focus))}${focus.theme ? ` “${esc(focus.theme)}”` : ""}</b>${evSummary(focus) ? ` (${esc(evSummary(focus))})` : ""}.`;
+  }
 
   function syncMapHidden() {
     if (window.SstvMap) SstvMap.setHidden(catalog.filter((s) => !shown(s)).map((s) => s.id));
   }
 
   function renderFilters() {
+    $("filters").hidden = !!focus;
     const ids = [...new Set(passes.filter((p) => !hideUnknown || hasMode(p.sat)).map((p) => p.sat.id))];
     $("filters").innerHTML = ids.map((id) => {
       const s = catalog.find((x) => x.id === id);
@@ -209,12 +350,16 @@
   function renderPasses() {
     const now = Date.now(), rows = visible();
     $("passes").innerHTML = rows.length ? rows.map((p) => {
-      const f = p.sat.downlinks.map((d) => d.freq_mhz.toFixed(3)).join("<br>");
+      const ev = eventFor(p);
+      // During an ARISS event, highlight the downlink in use and work out Doppler on it.
+      const f = p.sat.downlinks.map((d) => (ev && Math.abs(d.freq_mhz - ev.freq_mhz) < 0.0015
+        ? `<b class="ariss-freq">${d.freq_mhz.toFixed(3)}</b>` : d.freq_mhz.toFixed(3))).join("<br>");
       const elCls = p.tca.el >= 30 ? "el-high" : p.tca.el < 15 ? "el-low" : "";
       const now_ = p.aos.time <= now && p.los.time >= now;
-      const f0 = p.sat.downlinks[0].freq_mhz;
+      const f0 = (ev && ev.freq_mhz) || p.sat.downlinks[0].freq_mhz;
+      const evTag = ev ? ` <span class="badge ariss" title="${esc(`${ev.title}: ${evSummary(ev)}`)}">${esc(evName(ev))}</span>` : "";
       return `<tr class="${now_ ? "now" : ""}" data-sat="${esc(p.sat.id)}" data-aos="${+p.aos.time}" title="Replay this pass on the map">
-        <td><b>${esc(label(p.sat))}</b>${now_ ? ' <span class="small">overhead now</span>' : ""}</td>
+        <td><b>${esc(label(p.sat))}</b>${evTag}${now_ ? ' <span class="small">overhead now</span>' : ""}</td>
         <td>${f}</td>
         <td>${channelCell(p.sat)}</td>
         <td>${modeCell(p.sat)}</td>
@@ -223,9 +368,12 @@
         <td>${fmtTime(p.los.time)} <span class="small">${compass(p.los.az)}</span></td>
         <td>${fmtDur(p.los.time - p.aos.time)}</td>
         <td>${sign(doppler(p.aos, f0))} / ${sign(doppler(p.los, f0))} kHz</td></tr>`;
-    }).join("") : `<tr><td colspan="9">No passes found. Try more hours or a lower minimum elevation${hideUnknown ? ", or show satellites with no published mode" : ""}.</td></tr>`;
+    }).join("") : `<tr><td colspan="9">No passes found. Try ${lastWindow ? "a longer time window" : "more hours"} or a lower minimum elevation${hideUnknown && !focus ? ", or show satellites with no published mode" : ""}.</td></tr>`;
     const oldest = Math.max(...passes.map((p) => (now - p.epoch) / 86400000), 0);
-    $("data-age").textContent = `Times are your local time. ${passes.length} passes. Oldest orbital data used: ${oldest.toFixed(1)} days.`;
+    const span = lastWindow ? ` Window: ${fmtDay(new Date(lastWindow.start))} ${fmtTime(new Date(lastWindow.start))} to ${fmtDay(new Date(lastWindow.end))} ${fmtTime(new Date(lastWindow.end))}.` : "";
+    const far = lastWindow && lastWindow.end - now > 7 * 86400000 ? " Predictions more than a week ahead can be out by several minutes, so check again nearer the time." : "";
+    $("data-age").textContent = `Times are your local time.${span} ${rows.length} passes. Oldest orbital data used: ${oldest.toFixed(1)} days.${far}`;
+    renderFocus();
   }
 
   function tick() {
@@ -240,8 +388,12 @@
     const chText = channelText(p.sat);
     $("next-channel").textContent = chText ? `Radio channels: ${chText} (as it rises → as it sets)` : "";
     $("next-detail").textContent = `${fmtDay(p.aos.time)} ${fmtTime(p.aos.time)} from ${compass(p.aos.az)}, max ${p.tca.el.toFixed(0)}° ${compass(p.tca.az)}, sets ${compass(p.los.az)} at ${fmtTime(p.los.time)}`;
+    const ev = eventFor(p);
+    $("next-ariss").hidden = !ev;
+    if (ev) $("next-ariss").textContent = `${evName(ev)} SSTV event: ${evSummary(ev)}`;
     const ms = p.aos.time - now;
     if (ms <= 0) $("countdown").textContent = "Overhead now";
+    else if (ms >= 86400000) $("countdown").textContent = `in ${fmtUntil(ms)}`;
     else {
       const s = Math.floor(ms / 1000);
       $("countdown").textContent = (s >= 3600 ? `${Math.floor(s / 3600)}:` : "") + `${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
@@ -282,7 +434,8 @@
     for (const q of upcoming) {
       const key = `${q.sat.id}@${+q.aos.time}`, until = q.aos.time - now;
       const freqs = `${q.sat.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / ")} MHz`;
-      const ch = channelText(q.sat) ? `, channels ${channelText(q.sat)}` : "";
+      const ev = eventFor(q);
+      const ch = (channelText(q.sat) ? `, channels ${channelText(q.sat)}` : "") + (ev ? `. ${evName(ev)} event: ${evSummary(ev)}` : "");
       if (until > 0 && until <= lead && !notified.has(key)) {
         markNotified(key);
         notify(`SSTV pass: ${label(q.sat)} in ${Math.max(1, Math.round(until / 60000))} min`,
@@ -315,9 +468,13 @@
       "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${label(p.sat)} pass soon`, `TRIGGER:-PT${lead}M`, "END:VALARM", "END:VEVENT",
     ].join("\r\n"));
     const text = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//sstv-sats//web//EN", ...ev, "END:VCALENDAR", ""].join("\r\n");
+    saveFile(text, "sstv_passes.ics");
+  }
+
+  function saveFile(text, name) {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([text], { type: "text/calendar" }));
-    a.download = "sstv_passes.ics";
+    a.download = name;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
@@ -469,21 +626,43 @@
       if (saved.hours != null) $("hours").value = saved.hours;
     }
     $("lead").value = store.get("lead", 10);
-    const [cat, tleText, layout] = await Promise.all([
+    // Restore the time window unless it has already ended.
+    const win = store.get("window", null);
+    if (win && fromLocalInput(win.end) > Date.now()) { $("win-start").value = win.start; $("win-end").value = win.end; }
+    syncWindowUi();
+    const [cat, tleText, layout, events] = await Promise.all([
       fetch("data/satellites.json").then((r) => r.json()),
       fetch("data/tle.txt").then((r) => r.text()),
       fetch("data/chirp_layout.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch("data/ariss.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
     builtIn = cat.satellites; baseTles = parseTles(tleText); chirpLayout = layout;
+    if (events && Array.isArray(events.events)) ariss = { ...events, events: events.events.filter((e) => e.start) };
     // Drop stored satellites that have since been added to the built-in list.
     custom = custom.filter((s) => !builtIn.some((b) => b.norad_id === s.norad_id));
     updateAlertButton();
+    mergeCatalog();
+    renderAriss();
     refreshSatellites();
     refreshCustomTles();
   }
 
   renderKeymap();
   $("loc-form").addEventListener("submit", (e) => { e.preventDefault(); run(); });
+  for (const id of ["win-start", "win-end"]) $(id).addEventListener("change", syncWindowUi);
+  $("win-clear").addEventListener("click", () => {
+    $("win-start").value = ""; $("win-end").value = "";
+    syncWindowUi(); store.set("window", null);
+    focus = null;
+    if (passes.length || store.get("loc", null)) run();
+  });
+  $("focus-clear").addEventListener("click", () => { focus = null; renderFilters(); renderPasses(); tick(); });
+  $("ariss").addEventListener("click", (e) => {
+    const t = e.target.closest("button");
+    if (!t) return;
+    if (t.dataset.evPasses) showEventPasses(t.dataset.evPasses);
+    else if (t.dataset.evIcs) downloadEventIcs(t.dataset.evIcs);
+  });
   $("lat").addEventListener("input", () => { $("grid").value = ""; });
   $("lon").addEventListener("input", () => { $("grid").value = ""; });
   $("geo").addEventListener("click", () => {
@@ -556,6 +735,6 @@
     $("map-card").scrollIntoView({ behavior: "smooth", block: "start" });
   });
   setInterval(tick, 1000);
-  setInterval(() => { if (passes.length) { renderPasses(); } }, 60000);
+  setInterval(() => { if (passes.length) { renderPasses(); } renderAriss(); }, 60000);
   init().catch((e) => { document.querySelector("main").insertAdjacentHTML("afterbegin", `<p class="card">Couldn't load satellite data: ${esc(e.message)}</p>`); });
 })();

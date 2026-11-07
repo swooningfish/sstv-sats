@@ -210,3 +210,37 @@ body.no-scroll { overflow: hidden; }
   .site-header { gap: 12px; }
 }
 .legend .night-swatch { width: 18px; height: 12px; border-radius: 3px; display: inline-block; background: linear-gradient(90deg, var(--map-land) 0 45%, #ffe2a3 45% 52%, #0a1020 52%); border: 1px solid var(--border); }
+
+/* Optional time window in the location form */
+fieldset.window { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px 12px; margin: 0 0 12px; }
+fieldset.window legend { font-size: .85rem; color: var(--muted); padding: 0 4px; }
+fieldset.window .row { margin-bottom: 0; align-items: flex-end; }
+fieldset.window .hint { margin-top: 8px; }
+.win-actions { flex: 0 0 auto; padding-bottom: 8px; }
+input:disabled { opacity: .5; }
+
+/* ARISS SSTV events */
+.ariss-intro { margin: 8px 0 12px; max-width: 75ch; }
+.ariss-list { display: grid; gap: 12px; }
+.ariss-ev { border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: var(--bg); }
+.ariss-ev.active { border-color: var(--good); box-shadow: inset 4px 0 0 var(--good); }
+.ariss-ev.upcoming { border-color: var(--accent); box-shadow: inset 4px 0 0 var(--accent); }
+.ariss-ev.ended { opacity: .8; }
+.ariss-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.ariss-top h3 { margin: 2px 0 0; font-size: 1.15rem; }
+.ariss-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px 16px; margin: 12px 0; }
+.ariss-facts div { min-width: 0; }
+.ariss-facts dt { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
+.ariss-facts dd { margin: 1px 0 0; }
+.ariss-pauses { margin: 0 0 10px; padding-left: 20px; color: var(--warn); font-size: .85rem; }
+.ariss-submit { margin: 0 0 12px; }
+.ariss-none { color: var(--muted); margin: 0; }
+#ariss-past { margin-top: 12px; }
+#ariss-past .ariss-list { margin-top: 12px; }
+.badge { flex: none; display: inline-block; font-size: .75rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+.badge.live { background: var(--good); border-color: var(--good); color: var(--card); }
+.badge.soon { border-color: var(--accent); color: var(--accent); }
+.badge.ariss { font-size: .7rem; padding: 1px 7px; margin-left: 4px; border-color: var(--accent); color: var(--accent); vertical-align: 1px; }
+.ariss-freq { color: var(--accent); }
+.ariss-note { color: var(--accent); }
+.focus-bar { margin-top: 12px; padding: 8px 12px; border-radius: 8px; background: var(--row-hl); font-size: .9rem; }

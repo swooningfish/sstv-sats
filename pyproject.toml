@@ -22,7 +22,7 @@ sstv-sats = "sstv_sats.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-sstv_sats = ["satellites.json", "web/*"]
+sstv_sats = ["satellites.json", "ariss_events.json", "web/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -118,3 +118,83 @@ def test_predict_passes_offline():
         assert -4000 < p.los.doppler_hz(145.8) < -2000
     ics = passes_to_ics(passes)
     assert ics.count("BEGIN:VEVENT") == len(passes) and "TRIGGER:-PT10M" in ics
+
+
+# A trimmed copy of https://www.ariss.org/upcoming-sstv-events.html (November 2026), newest first.
+ARISS_PAGE = """<html><body><div class="paragraph">
+<strong>2026-11-05 Expedition 75 Series 35 "Space Memories"</strong><br>
+Begins Monday, November 9 time TBD<br>
+Concludes Monday, November 16, 2026 time TBD<br>
+Images will be transmitted at 437.550 MHz (+/- Doppler shift) using Robot 35 SSTV mode for 36 seconds
+transmission, two minutes off.<br>
+Submit your original decoded images to the SSTV gallery for event certificate.<br>
+<strong>2026-10-19 Expedition 75 Series 34 "ARISS Hardware"</strong><br>
+Begins Thursday October 22 15:30 UTC<br>
+Concludes Monday October 26 time 17:45 UTC<br>
+Images will be transmitted at 437.55 MHz (+/- Doppler shift), decode with Robot 36 mode, transmission 36 seconds on, two minutes off.<br>
+<strong>2026-04-09 SSTV Series 31 commemorates several space achievements</strong><br>
+The SSTV event should begin shortly after 11:15 UTC on April 10.<br>
+The SSTV event should conclude around 13:55 UTC on April 14.<br>
+<strong>2026-03-24 SSTV Series 31 commemorates several space achievements</strong><br>
+Start: April 10 (start time TBD)<br>End: April 14 (end time TBD)<br>Frequency: 437.55 MHz<br>
+SSTV Mode: Robot 36 with 2 minutes between transmissions.<br>
+<strong>12-04-2025 SSTV Series 30 Update:</strong><br>
+The RS-38S SSTV retread of the Series 30 SSTV campaign is scheduled to start at 00:01 UTC December 5.
+The campaign will conclude at 23:59 UTC December 13.<br>
+Frequency: 437.825 MHz Mode: Robot 36 Timing: 36 seconds on, 2-3 minutes off<br>
+</div></body></html>"""
+
+
+def test_ariss_events_parse():
+    from sstv_sats.ariss import parse_events
+
+    ev = {e["id"]: e for e in parse_events(ARISS_PAGE)}
+    s35 = ev["series-35-ISS"]
+    assert s35["theme"] == "Space Memories" and s35["series"] == 35
+    assert s35["start"] == "2026-11-09T00:00:00+00:00" and not s35["start_time_known"]
+    assert s35["end"] == "2026-11-16T23:59:00+00:00" and not s35["end_time_known"]
+    assert s35["freq_mhz"] == 437.55 and s35["sstv_mode"] == "Robot 36"  # "Robot 35" on the page is a typo
+    assert s35["schedule"] == "36 s on / 2 min off"
+    assert s35["submit_url"] == "https://ariss-usa.org/ARISS_SSTV/" and s35["certificate"]
+    s34 = ev["series-34-ISS"]
+    assert (s34["start"], s34["end"]) == ("2026-10-22T15:30:00+00:00", "2026-10-26T17:45:00+00:00")
+    assert s34["start_time_known"] and s34["end_time_known"]
+    # Two announcements of Series 31 are merged: times from the newer one, mode from the older one.
+    s31 = ev["series-31-ISS"]
+    assert s31["start"] == "2026-04-10T11:15:00+00:00" and s31["end"] == "2026-04-14T13:55:00+00:00"
+    assert s31["sstv_mode"] == "Robot 36" and s31["schedule"] == "2 min between pictures"
+    rs = ev["series-30-RS38S"]
+    assert rs["norad_id"] == 57189 and rs["freq_mhz"] == 437.825 and rs["title"] == "SSTV Series 30"
+    assert rs["start"] == "2025-12-05T00:01:00+00:00" and rs["schedule"] == "36 s on / 2-3 min off"
+
+
+def test_ariss_status_and_window():
+    from sstv_sats.ariss import current_or_next, parse_events, status, window
+
+    events = parse_events(ARISS_PAGE)
+    now = datetime(2026, 11, 7, 12, tzinfo=timezone.utc)
+    nxt = current_or_next(events, now)
+    assert nxt["id"] == "series-35-ISS" and status(nxt, now) == "upcoming"
+    assert status(nxt, datetime(2026, 11, 12, tzinfo=timezone.utc)) == "active"
+    assert status(nxt, datetime(2026, 11, 17, tzinfo=timezone.utc)) == "ended"
+    start, end = window(nxt)
+    assert (end - start).days == 7
+
+
+def test_ariss_curated_overrides():
+    from sstv_sats.ariss import merge_curated, parse_events
+
+    merged = merge_curated(parse_events(ARISS_PAGE), [{"id": "series-35-ISS", "start": "2026-11-09T10:00:00+00:00", "start_time_known": True}])
+    s35 = next(e for e in merged if e["id"] == "series-35-ISS")
+    assert s35["start"] == "2026-11-09T10:00:00+00:00" and s35["start_time_known"] and s35["freq_mhz"] == 437.55
+
+
+def test_cli_time_window(monkeypatch):
+    from sstv_sats import cli
+
+    args = cli.build_parser().parse_args(["passes", "--grid", "IO91wm", "--start", "2026-11-09T10:00Z", "--end", "2026-11-10T04:00Z"])
+    start, hours, wanted = cli._resolve_window(args)
+    assert start == datetime(2026, 11, 9, 10, tzinfo=timezone.utc) and hours == 18 and wanted is None
+    bad = cli.build_parser().parse_args(["passes", "--grid", "IO91wm", "--start", "2026-11-10", "--end", "2026-11-09"])
+    with pytest.raises(SystemExit):
+        cli._resolve_window(bad)

@@ -33,12 +33,35 @@
         <label>Min peak elevation (°) <input id="minel" type="number" value="10" min="0" max="90"></label>
         <label>Look ahead (hours) <input id="hours" type="number" value="24" min="1" max="168"></label>
       </div>
+      <fieldset class="window" id="window">
+        <legend>Time window <span class="small">optional</span></legend>
+        <div class="row">
+          <label>From <input id="win-start" type="datetime-local"></label>
+          <label>To <input id="win-end" type="datetime-local"></label>
+          <div class="win-actions"><button type="button" id="win-clear" class="link">Clear dates</button></div>
+        </div>
+        <p class="hint">Set both to predict passes for a fixed period, up to 10 days, such as an ARISS event, instead of looking ahead from now. Times are your local time.</p>
+      </fieldset>
       <div class="buttons">
         <button type="submit" class="primary">Predict passes</button>
         <button type="button" id="geo">Use my location</button>
       </div>
       <p class="hint">Your location stays in this browser and is never sent anywhere.</p>
     </form>
+  </section>
+
+  <section class="card" id="ariss" hidden>
+    <div class="results-head">
+      <h2>ARISS SSTV events</h2>
+      <span class="small" id="ariss-checked"></span>
+    </div>
+    <p class="hint ariss-intro">A few times a year ARISS (Amateur Radio on the International Space Station) sends a series of SSTV pictures from the ISS for several days. Anyone with an FM radio can receive them, and decoded pictures sent to the gallery earn an event certificate.</p>
+    <div id="ariss-list" class="ariss-list"></div>
+    <details class="settings" id="ariss-past" hidden>
+      <summary><span class="summary-title">Recent events</span> <span class="small" id="ariss-past-count"></span></summary>
+      <div id="ariss-past-list" class="ariss-list"></div>
+    </details>
+    <p class="hint">Schedule read from <a href="https://www.ariss.org/upcoming-sstv-events.html">ARISS Upcoming SSTV events</a> each day when this site rebuilds. Times can change at short notice, so check <a href="https://www.ariss.org/upcoming-sstv-events.html">ariss.org</a> or ARISS on social media before an event.</p>
   </section>
 
   <details class="card keymap" id="keymap">
@@ -72,6 +95,7 @@
         <div id="next-detail"></div>
         <div id="next-mode" class="mode"></div>
         <div id="next-channel" class="mode"></div>
+        <div id="next-ariss" class="mode ariss-note" hidden></div>
       </div>
       <div class="countdown" id="countdown"></div>
     </div>
@@ -136,6 +160,7 @@
       </div>
       <p class="hint">The Channel column shows which memory channels to use on each pass, in order: start on the first as the satellite rises and step down as it passes. Change these if you imported the CHIRP file somewhere other than channel 1.</p>
     </details>
+    <div class="focus-bar" id="focus-bar" hidden><span id="focus-text"></span> <button type="button" class="link" id="focus-clear">Show all satellites</button></div>
     <label class="check"><input type="checkbox" id="hide-unknown"> Hide satellites with no published SSTV mode</label>
     <div class="filters" id="filters"></div>
     <div class="table-wrap">

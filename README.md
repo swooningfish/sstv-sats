@@ -40,7 +40,7 @@ Know when the amateur satellites that send **slow-scan TV (SSTV) pictures** will
 | RS95S | QMR KWT 2 | 67291 | 436.950 | Not published | |
 | RS57S | Monitor 4 | 57182 | 436.080 | Not published | SatNOGS lists GMSK only, so SSTV is unconfirmed |
 | RS90S | Luca 1 | 67287 | 437.180 | Not published | SatNOGS lists GMSK only, so SSTV is unconfirmed |
-| ISS | ISS | 25544 | 145.800 | PD120 or PD180 | ARISS SSTV runs as [scheduled events](https://ariss-sstv.blogspot.com/) |
+| ISS | ISS | 25544 | 145.800 | PD120 or PD180 | ARISS SSTV runs as [scheduled events](#ariss-sstv-events) |
 | | | | 437.550 | Robot 36 | |
 | SONATE-2 | SONATE 2 | 59112 | 145.880 | Martin M1 | |
 | JAMX01 | JAMX01 | 98248 | 435.175 | Not published | Temporary NORAD ID, TLE from SatNOGS |
@@ -48,6 +48,20 @@ Know when the amateur satellites that send **slow-scan TV (SSTV) pictures** will
 | GALAPAGOS | Galapagos UTE SWSU | 67279 | 437.050 | Not published | |
 
 These satellites send SSTV **periodically**, not all the time, so a pass won't always carry a picture.
+
+### ARISS SSTV events
+
+A few times a year [ARISS](https://www.ariss.org/upcoming-sstv-events.html) runs an SSTV event from the ISS: a series of about 12 pictures sent over several days. ARISS announces the dates, frequency, SSTV mode and on/off schedule on its [Upcoming SSTV events](https://www.ariss.org/upcoming-sstv-events.html) page, and decoded pictures go to the [ARISS SSTV Gallery](https://ariss-usa.org/ARISS_SSTV/), which gives out an event certificate.
+
+sstv-sats reads that page and shows each event with:
+
+- its start and end (marked "time TBD" until ARISS publishes the times)
+- the frequency, for example 437.550 MHz FM, adjusted for Doppler
+- the SSTV mode, for example Robot 36
+- the schedule, for example 36 s on / 2 min off
+- where to submit your pictures
+
+In the web app it's the **ARISS SSTV events** panel, where **Show ISS passes during this event** fills in the time window for you. On the command line, use `sstv-sats ariss` and `sstv-sats passes --ariss`. The page is free text, so it's read on a best-effort basis. To correct an event by hand, add it to [`src/sstv_sats/ariss_events.json`](src/sstv_sats/ariss_events.json).
 
 ### SSTV modes
 
@@ -114,7 +128,9 @@ The [web app](#web-app) and `sstv-sats passes` show the exact shift for each pas
 
 **[swooningfish.github.io/sstv-sats](https://swooningfish.github.io/sstv-sats/)**
 
-Enter your latitude and longitude or Maidenhead locator, or click **Use my location**. You get:
+Enter your latitude and longitude or Maidenhead locator, or click **Use my location**. To predict a set period instead of looking ahead from now, fill in the optional **Time window** (**From** and **To**, in your local time, up to 10 days). You get:
+
+- **ARISS SSTV events:** the current and next ARISS events from the ISS, with their dates, frequency, SSTV mode, on/off schedule and where to submit your pictures for the event certificate. **Show ISS passes during this event** sets the time window to the event and lists only the ISS passes. **Add event to calendar** saves the event as an .ics file. During an event, ISS passes are tagged with the series, and the frequency and Doppler shown are the event's downlink.
 
 - **Next pass:** a countdown, the frequency, the SSTV mode and where to point your antenna.
 - **Satellite map:**
@@ -171,12 +187,41 @@ ISS                     145.800  2026-10-19 08:39:34    W  08:45:05    90    S  
 | **Az** | Compass direction to point your antenna |
 | **Doppler** | How far off the nominal frequency the signal is at AOS, TCA and LOS |
 
+### ARISS SSTV events
+
+```bash
+sstv-sats ariss
+```
+
+```
+Expedition 75 Series 35 "Space Memories"  [upcoming]
+  Satellite: ISS (NORAD 25544)
+  When:      Mon 09 Nov 2026 (time TBD) to Mon 16 Nov 2026 (time TBD)
+  Frequency: 437.550 MHz FM (adjust for Doppler)
+  SSTV mode: Robot 36
+  Schedule:  36 s on / 2 min off
+  Submit:    https://ariss-usa.org/ARISS_SSTV/ (original decodes qualify for the event certificate)
+```
+
+To list your ISS passes during that event:
+
+```bash
+sstv-sats passes --ariss --grid IO91wm
+```
+
+Or set any time window yourself:
+
+```bash
+sstv-sats passes --grid IO91wm --start "2026-11-09 18:00" --end "2026-11-10 06:00"
+```
+
 ### All commands
 
 | Command | What it does |
 |---|---|
 | `sstv-sats passes` | List upcoming passes |
 | `sstv-sats watch` | Keep running and alert before every pass (see [Alerts](#alerts)) |
+| `sstv-sats ariss` | List current and upcoming ARISS SSTV events (`--all` for past ones, `--json`) |
 | `sstv-sats ics -o passes.ics` | Calendar file with a reminder before each pass (next 72 hours) |
 | `sstv-sats chirp -o my.csv` | Write a CHIRP CSV |
 | `sstv-sats list -v` | Show the satellite catalogue with notes |
@@ -192,6 +237,8 @@ Run any command with `--help` to see all its options.
 |---|---|---|
 | `--grid IO91wm` or `--lat` / `--lon` / `--alt` | passes, watch, ics | Your location (or set `SSTV_GRID`, or `SSTV_LAT` / `SSTV_LON` / `SSTV_ALT`) |
 | `--hours 24` | passes, watch, ics | How far ahead to look |
+| `--start` / `--end` | passes, watch, ics | A fixed time window instead of `--hours`, for example `--start 2026-11-09 --end "2026-11-16 23:59"`. Times are local unless they end in `Z` or `+00:00` |
+| `--ariss` | passes, watch, ics | Use the current or next ARISS SSTV event as the time window and its satellite (usually the ISS), with frequency and Doppler on the event's downlink |
 | `--min-el 10` | passes, watch, ics | Skip passes that peak lower than this |
 | `--sat ISS umka RS58S` | all except list | Only these satellites (by ID, name or NORAD number) |
 | `--utc` | passes, watch | Show times in UTC instead of local time |
@@ -269,7 +316,8 @@ Upload `_site/` to any static web host. Rerun the command at least once a week s
 - **Caching:** TLEs are cached for 12 hours in `~/.cache/sstv-sats` (change this with `SSTV_SATS_CACHE`). If the download fails, the older cached copy is used with a warning.
 - **Predictions:** SGP4, using [Skyfield](https://rhodesmill.org/skyfield/) on the command line and [satellite.js](https://github.com/shashwatak/satellite-js) in the web app. AOS and LOS are when the satellite crosses your horizon (0°).
 - **Map:** coastlines from [Natural Earth](https://www.naturalearthdata.com/) via [world-atlas](https://github.com/topojson/world-atlas), drawn on a canvas centred on your longitude. Day and night shading comes from the sun's position. The 3D globe uses [three.js](https://threejs.org/), which is only downloaded when you switch to it. Each cone reaches the satellite's radio horizon: the circle where it sits at 0° elevation.
-- **Doppler:** `−f × range-rate / c`, worked out at AOS, TCA and LOS on the satellite's first downlink.
+- **Doppler:** `−f × range-rate / c`, worked out at AOS, TCA and LOS on the satellite's first downlink, or on the event's downlink during an ARISS event.
+- **ARISS events:** read from [ariss.org](https://www.ariss.org/upcoming-sstv-events.html) when the site is built (daily) and by `sstv-sats ariss`, then cached for 6 hours. That page doesn't allow browsers to read it directly, so the web app uses the copy made at build time. Announcements about the same series are merged. Dates without a time cover the whole UTC day.
 
 ## Contributing
 

@@ -1,0 +1,4 @@
+{
+  "description": "Hand-entered ARISS SSTV events and corrections. Entries here override events parsed from https://www.ariss.org/upcoming-sstv-events.html with the same id (for example 'series-35-ISS'), so you only need the fields you want to change. Times are UTC ISO 8601. See ariss.py for all the keys.",
+  "events": []
+}

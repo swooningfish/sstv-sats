@@ -31,6 +31,12 @@ def _add_prediction(p):
     _add_location(p)
     g = p.add_argument_group("prediction")
     g.add_argument("--hours", type=float, default=24, help="how far ahead to look (default 24)")
+    g.add_argument("--start", type=_when, metavar="TIME",
+                   help="start of the time window instead of now, e.g. 2026-11-09 or '2026-11-09 18:00' "
+                        "(local time unless it ends in Z or +00:00)")
+    g.add_argument("--end", type=_when, metavar="TIME", help="end of the time window (overrides --hours)")
+    g.add_argument("--ariss", action="store_true",
+                   help="window = the current or next ARISS SSTV event, and only its satellite (usually the ISS)")
     g.add_argument("--min-el", type=float, default=10, help="ignore passes peaking below this elevation (default 10)")
     g.add_argument("--sat", nargs="+", metavar="SAT", help="only these satellites (id, name or NORAD id)")
     g.add_argument("--tle-file", type=Path, help="use this TLE file instead of downloading")
@@ -40,6 +46,56 @@ def _add_prediction(p):
 def _env_float(name):
     v = os.environ.get(name)
     return float(v) if v not in (None, "") else None
+
+
+def _when(text):
+    try:
+        dt = datetime.fromisoformat(text.strip().replace("Z", "+00:00").replace("z", "+00:00"))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a date/time: {text!r} (try 2026-11-09 or '2026-11-09 18:00')")
+    return dt.astimezone(timezone.utc) if dt.tzinfo is None else dt  # naive = local time
+
+
+def _resolve_window(args):
+    """(start, hours, satellites) from --start / --end / --hours / --ariss."""
+    wanted = args.sat
+    start, end = args.start, args.end
+    if getattr(args, "ariss", False):
+        from .ariss import current_or_next, get_events, window
+
+        event = current_or_next(get_events(offline=args.offline, quiet=True)["events"])
+        if not event:
+            sys.exit("error: no current or upcoming ARISS SSTV event is listed (see `sstv-sats ariss --all`)")
+        ev_start, ev_end = window(event)
+        start, end = start or max(ev_start, datetime.now(timezone.utc)), end or ev_end
+        wanted = wanted or [event["satellite_id"]]
+        args.ariss_event = event
+        print(f"ARISS event: {event['title']} - {_event_line(event)}", file=sys.stderr)
+    if end and not start:
+        start = datetime.now(timezone.utc)
+    hours = (end - start).total_seconds() / 3600 if end else args.hours
+    if hours <= 0:
+        sys.exit("error: --end must be after --start")
+    if hours > 24 * 31:
+        sys.exit("error: the time window is limited to 31 days")
+    return start, hours, wanted
+
+
+def _event_line(e):
+    """One line: when, frequency, mode and on/off cycle."""
+    from .ariss import _dt
+
+    def fmt(s, known):
+        return f"{_dt(s):%a %d %b %Y}" + (f" {_dt(s):%H:%M} UTC" if known else " (time TBD)") if s else "?"
+
+    bits = [f"{fmt(e['start'], e.get('start_time_known'))} to {fmt(e.get('end'), e.get('end_time_known'))}"]
+    if e.get("freq_mhz"):
+        bits.append(f"{e['freq_mhz']:.3f} MHz FM")
+    if e.get("sstv_mode"):
+        bits.append(e["sstv_mode"])
+    if e.get("schedule"):
+        bits.append(e["schedule"])
+    return ", ".join(bits)
 
 
 def _resolve_location(args):
@@ -57,14 +113,29 @@ def _predict(args, start=None, quiet=False):
     from .passes import predict_passes
 
     lat, lon, alt = _resolve_location(args)
-    sats = select(load_catalog(), args.sat)
+    win_start, hours, wanted = _resolve_window(args)
+    start = start or win_start
+    sats = select(load_catalog(), wanted)
     if not sats:
         sys.exit("error: no matching satellites (see `sstv-sats list`)")
+    event = getattr(args, "ariss_event", None)
+    if event and event.get("freq_mhz"):
+        # Put the event's downlink first, so the frequency and Doppler shown are the ones in use.
+        import dataclasses
+
+        def lead(s):
+            if s.id != event["satellite_id"]:
+                return s
+            dls = sorted(s.downlinks, key=lambda d: abs(d.freq_mhz - event["freq_mhz"]) > 0.0015)
+            return dataclasses.replace(s, downlinks=tuple(dls))
+
+        sats = [lead(s) for s in sats]
     tles = get_tles([s.norad_id for s in sats], tle_file=args.tle_file, offline=args.offline, quiet=quiet)
     missing = [s.label for s in sats if s.norad_id not in tles]
     if missing and not quiet:
         print(f"warning: no orbital elements for: {', '.join(missing)}", file=sys.stderr)
-    passes = predict_passes(sats, tles, lat, lon, alt, start=start, hours=args.hours, min_elevation=args.min_el)
+    passes = predict_passes(sats, tles, lat, lon, alt, start=start, hours=hours, min_elevation=args.min_el)
+    args.window_hours, args.window_start = hours, start or datetime.now(timezone.utc)
     return passes, (lat, lon, alt)
 
 
@@ -105,7 +176,13 @@ def cmd_passes(args):
         print(json.dumps([p.to_dict() for p in passes], indent=2))
         return
     tz = "UTC" if args.utc else datetime.now().astimezone().tzname()
-    print(f"SSTV passes for {lat:.4f}, {lon:.4f} - next {args.hours:g} h, max elevation >= {args.min_el:g} deg, times {tz}\n")
+    if args.start or args.end or args.ariss:
+        ws = _local(args.window_start, args.utc)
+        we = _local(args.window_start + timedelta(hours=args.window_hours), args.utc)
+        span = f"{ws:%a %d %b %H:%M} to {we:%a %d %b %H:%M}"
+    else:
+        span = f"next {args.hours:g} h"
+    print(f"SSTV passes for {lat:.4f}, {lon:.4f} - {span}, max elevation >= {args.min_el:g} deg, times {tz}\n")
     if not passes:
         print("No passes found. Try --hours 48 or a lower --min-el.")
         return
@@ -177,6 +254,39 @@ def cmd_watch(args):
             time.sleep(20)
     except KeyboardInterrupt:
         print("stopped.")
+
+
+def cmd_ariss(args):
+    from .ariss import get_events, status
+
+    data = get_events(offline=args.offline, max_age_hours=0 if args.refresh else 6)
+    events = data["events"]
+    if not args.all:
+        events = [e for e in events if status(e) != "ended"]
+    if args.json:
+        print(json.dumps({**data, "events": events}, indent=2))
+        return
+    if not events:
+        print("No current or upcoming ARISS SSTV events are listed." + ("" if args.all else " Use --all to see past ones."))
+    for e in sorted(events, key=lambda x: x["start"]):
+        st = status(e)
+        print(f"{e['title']}  [{ {'active': 'ON NOW', 'upcoming': 'upcoming', 'ended': 'ended'}[st] }]")
+        print(f"  Satellite: {e['satellite']}" + (f" (NORAD {e['norad_id']})" if e.get("norad_id") else ""))
+        print(f"  When:      {_event_line(e).split(', ')[0]}")
+        if e.get("freq_mhz"):
+            print(f"  Frequency: {e['freq_mhz']:.3f} MHz FM (adjust for Doppler)")
+        if e.get("sstv_mode"):
+            print(f"  SSTV mode: {e['sstv_mode']}")
+        if e.get("schedule"):
+            print(f"  Schedule:  {e['schedule']}")
+        for p in e.get("pauses", []):
+            print(f"  Pause:     {p}")
+        if e.get("submit_url"):
+            cert = " (original decodes qualify for the event certificate)" if e.get("certificate") else ""
+            print(f"  Submit:    {e['submit_url']}{cert}")
+        print()
+    print(f"Source: {data['source']}" + (f" (checked {data['fetched']})" if data.get("fetched") else " (not downloaded)"))
+    print("Times are subject to change. For the passes during the next event: sstv-sats passes --ariss --grid <locator>")
 
 
 def cmd_update_tle(args):
@@ -260,6 +370,13 @@ def build_parser():
     p.add_argument("--utc", action="store_true")
     p.add_argument("--once", action="store_true", help=argparse.SUPPRESS)
     p.set_defaults(func=cmd_watch)
+
+    p = sub.add_parser("ariss", help="list ARISS SSTV events from the ISS (frequency, mode, dates, where to submit)")
+    p.add_argument("--all", action="store_true", help="include past events")
+    p.add_argument("--json", action="store_true", help="machine-readable output")
+    p.add_argument("--refresh", action="store_true", help="re-download the schedule now (it is cached for 6 hours)")
+    p.add_argument("--offline", action="store_true", help="use the cached schedule only")
+    p.set_defaults(func=cmd_ariss)
 
     p = sub.add_parser("update-tle", help="force-refresh cached orbital elements")
     p.set_defaults(func=cmd_update_tle)

@@ -48,7 +48,7 @@
         {"freq_mhz": 145.800, "mode": "FM", "sstv_mode": "PD120 or PD180", "note": "ARISS SSTV events"},
         {"freq_mhz": 437.550, "mode": "FM", "sstv_mode": "Robot 36"}
       ],
-      "notes": "ARISS SSTV runs as scheduled events - check https://ariss-sstv.blogspot.com/ for dates."
+      "notes": "ARISS SSTV runs as scheduled events - see the ARISS SSTV events panel, `sstv-sats ariss`, or https://www.ariss.org/upcoming-sstv-events.html."
     },
     {
       "id": "SONATE-2", "name": "SONATE 2", "short": "SONATE2", "norad_id": 59112,
