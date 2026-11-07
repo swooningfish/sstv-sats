@@ -25,7 +25,8 @@ Know when the amateur satellites that send **slow-scan TV (SSTV) pictures** will
 7. [Hosting your own copy](#hosting-your-own-copy)
 8. [How it works](#how-it-works)
 9. [Contributing](#contributing)
-10. [Credits and licence](#credits-and-licence)
+10. [Changelog](#changelog)
+11. [Credits and licence](#credits-and-licence)
 
 ## The satellites
 
@@ -94,8 +95,8 @@ That covers every mode these satellites use. A few things to know:
 
 | File | Channels | Use it when |
 |---|---|---|
-| [`sstv_satellites_chirp.csv`](chirp/sstv_satellites_chirp.csv) | 38 | **Recommended** for most handhelds and mobiles |
-| [`sstv_satellites_chirp_fine_doppler.csv`](chirp/sstv_satellites_chirp_fine_doppler.csv) | 66 | Your radio has a narrow filter and needs 5 kHz steps |
+| [`sstv_satellites_chirp.csv`](chirp/sstv_satellites_chirp.csv) | 62 | **Recommended** for most handhelds and mobiles |
+| [`sstv_satellites_chirp_fine_doppler.csv`](chirp/sstv_satellites_chirp_fine_doppler.csv) | 66 | You also want Doppler channels for the 2 m downlinks |
 | [`sstv_satellites_chirp_no_doppler.csv`](chirp/sstv_satellites_chirp_no_doppler.csv) | 14 | You use an SDR or tune by hand |
 
 To import: in CHIRP, read your radio first, then use **File → Import**, pick the CSV and upload it to the radio.
@@ -107,10 +108,12 @@ Each satellite's channels are in frequency order: **minus, then centre, then plu
 | Location | Name | Frequency | When to use it |
 |---|---|---|---|
 | 1 | `RS58S-10` | 435.280 | End of the pass (LOS) |
-| 2 | `RS58S` | 435.290 | Middle of the pass (highest point) |
-| 3 | `RS58S+10` | 435.300 | Start of the pass (AOS) |
+| 2 | `RS58S-5` | 435.285 | Second half of the pass |
+| 3 | `RS58S` | 435.290 | Middle of the pass (highest point) |
+| 4 | `RS58S+5` | 435.295 | First half of the pass |
+| 5 | `RS58S+10` | 435.300 | Start of the pass (AOS) |
 
-- **70 cm satellites** get `-10`, centre and `+10` channels in the recommended file, and `-10`, `-5`, centre, `+5` and `+10` in the fine file.
+- **70 cm satellites** get `-10`, `-5`, centre, `+5` and `+10` channels (5 kHz steps) in both the recommended and fine files.
 - **2 m downlinks** (ISS 145.800, SONATE 2) only shift by about ±3.5 kHz. They get one channel in the recommended file and `-5`, centre, `+5` in the fine file.
 - **ISS** also has a 70 cm downlink, listed as `ISSU`.
 
@@ -119,8 +122,8 @@ Each satellite's channels are in frequency order: **minus, then centre, then plu
 A satellite coming towards you sounds higher than its real frequency, and lower as it moves away. On 70 cm that's up to ±10 kHz, which is enough to garble an FM picture. So:
 
 1. As the satellite rises, listen on the **`+10`** channel.
-2. Near the highest point, step down to the **centre** channel.
-3. As it sets, step down to **`-10`**.
+2. Step down through **`+5`**, the **centre** channel near the highest point, then **`-5`**.
+3. As it sets, finish on **`-10`**.
 
 The [web app](#web-app) and `sstv-sats passes` show the exact shift for each pass.
 
@@ -359,8 +362,15 @@ Satellites come and go. All the satellite data is in one file, [`src/sstv_sats/s
 
 4. Open a pull request. CI fails if the CHIRP files don't match `satellites.json`.
 
+## Changelog
+
+### 2026-11-07
+
+- The recommended CHIRP file now uses 5 kHz Doppler steps on 70 cm (`-10`, `-5`, centre, `+5`, `+10`) instead of 10 kHz, because 10 kHz was too coarse. It now has 62 channels, so re-import it if you used the old one. Thanks to **Rik, M7GMT** for the suggestion.
+
 ## Credits and licence
 
 - Satellite list from the "Satellites with periodic SSTV" graphic by **LU3FCI, Juan Carlos**. 73 and good reception to all!
+- 5 kHz Doppler steps in the CHIRP files suggested by **Rik, M7GMT**.
 - Orbital data from CelesTrak and SatNOGS, under their own terms. Please keep the 12-hour cache so their servers aren't hammered.
 - Code licensed under MIT.

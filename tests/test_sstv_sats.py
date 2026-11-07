@@ -47,14 +47,14 @@ def test_select_by_name_and_id():
 def test_chirp_csv_basic_doppler():
     sats = select(load_catalog(), ["RS40S", "ISS"])
     rows = chirp_rows(sats, doppler="basic", start=1)
-    # RS40S: 3 UHF channels. ISS: 145.800 (1 VHF channel) + 437.550 (3 UHF channels).
-    assert len(rows) == 7
+    # RS40S: 5 UHF channels. ISS: 145.800 (1 VHF channel) + 437.550 (5 UHF channels).
+    assert len(rows) == 11
     parsed = list(csv.DictReader(io.StringIO(to_csv(rows))))
     assert list(parsed[0].keys()) == HEADER
-    assert [r["Frequency"] for r in parsed[:3]] == ["437.615000", "437.625000", "437.635000"]
-    assert [r["Location"] for r in parsed] == [str(i) for i in range(1, 8)]
+    assert [r["Frequency"] for r in parsed[:5]] == ["437.615000", "437.620000", "437.625000", "437.630000", "437.635000"]
+    assert [r["Location"] for r in parsed] == [str(i) for i in range(1, 12)]
     assert all(len(r["Name"]) <= 8 for r in parsed)
-    assert [r["Name"] for r in parsed[:3]] == ["RS40S-10", "RS40S", "RS40S+10"]
+    assert [r["Name"] for r in parsed[:5]] == ["RS40S-10", "RS40S-5", "RS40S", "RS40S+5", "RS40S+10"]
     assert all(r["Mode"] == "FM" and r["Duplex"] == "" for r in parsed)
 
 

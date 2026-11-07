@@ -338,7 +338,7 @@ def build_parser():
     p = sub.add_parser("chirp", help="write a CHIRP CSV of SSTV downlink channels")
     p.add_argument("-o", "--output", default="sstv_satellites_chirp.csv", help="output file, or - for stdout")
     p.add_argument("--doppler", choices=list(DOPPLER_PROFILES), default="basic",
-                   help="extra Doppler channels: none, basic (70cm +/-10 kHz) or full (+/-5 & 10 kHz, 2m +/-5) (default basic)")
+                   help="extra Doppler channels: none, basic (70cm +/-5 & 10 kHz) or full (basic plus 2m +/-5 kHz) (default basic)")
     p.add_argument("--start", type=int, default=1, help="first memory location (default 1)")
     p.add_argument("--name-length", type=int, default=8, help="max channel-name length for your radio (default 8)")
     p.add_argument("--sat", nargs="+", metavar="SAT", help="only these satellites")
