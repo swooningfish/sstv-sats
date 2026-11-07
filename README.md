@@ -128,7 +128,13 @@ The [web app](#web-app) and `sstv-sats passes` show the exact shift for each pas
 
 **[swooningfish.github.io/sstv-sats](https://swooningfish.github.io/sstv-sats/)**
 
-Enter your latitude and longitude or Maidenhead locator, or click **Use my location**. To predict a set period instead of looking ahead from now, fill in the optional **Time window** (**From** and **To**, in your local time, up to 10 days). You get:
+Enter your latitude and longitude or Maidenhead locator, or click **Use my location**. To predict a set period instead of looking ahead from now, pick dates and times in the optional **Time window** (**From** and **To**, in your local time, up to 10 days). You get:
+
+**Sharing:** the time window, or the ARISS event you're viewing, is kept in the page address, so you can bookmark or share it. Your location is never included, so whoever opens the link sees the passes for their own location. **Copy link** copies it for you.
+
+- `…/sstv-sats/#event=series-35-ISS`: ISS passes during ARISS Series 35, using the event's latest announced dates
+- `…/sstv-sats/#from=2026-11-10T18:00Z&to=2026-11-11T06:00Z`: all passes in that window, given in UTC so the link works in any time zone
+
 
 - **ARISS SSTV events:** the current and next ARISS events from the ISS, with their dates, frequency, SSTV mode, on/off schedule and where to submit your pictures for the event certificate. **Show ISS passes during this event** sets the time window to the event and lists only the ISS passes. **Add event to calendar** saves the event as an .ics file. During an event, ISS passes are tagged with the series, and the frequency and Doppler shown are the event's downlink.
 
@@ -141,6 +147,7 @@ Enter your latitude and longitude or Maidenhead locator, or click **Use my locat
   - click any pass in the table to replay it on the map
 - **Upcoming passes:** rise and set times, compass directions, peak elevation, SSTV mode, Doppler, and the **memory channels** to use from the CHIRP file (for example `3 → 2 → 1`: start on 3 as the satellite rises). If you imported a different CHIRP file, or started somewhere other than channel 1, set that under **Radio settings**. Tick **Hide satellites with no published SSTV mode** to list only the satellites whose mode is known.
 - **Alerts:** **Enable alerts** for a browser notification before each pass and again when the satellite rises (only while the page is open), with a **Send a test alert** button to check it works. Or use **Add to calendar (.ics)** for reminders from your calendar.
+- **Calendar for each pass:** every row in the pass table has **Google**, which opens Google Calendar with that pass filled in, and **.ics**, which downloads it for Outlook, Apple Calendar and others. Each calendar entry includes the frequency, SSTV mode, directions, Doppler and memory channels. During an ARISS event it also has the event's on/off schedule and the gallery link. **Add to calendar (.ics)** at the top saves every pass in the list, so while you're viewing an ARISS event it saves all of that event's passes in one file.
 - **Add a satellite:** in the Satellites section, add any satellite by NORAD number (orbital data is downloaded from CelesTrak and refreshed every 12 hours) or by pasting its TLE. Added satellites are saved in your browser only and appear in the passes and on the map.
 - **CHIRP files:** download links for the three CHIRP files. These cover the built-in satellites only.
 - **UV-K1 / UV-K5 SSTV app keys:** a collapsible panel showing which keys do what in the F4HWN firmware's SSTV app.

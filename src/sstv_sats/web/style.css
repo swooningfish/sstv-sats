@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   --bg: #f4f6fb;
   --card: #ffffff;
   --text: #16202f;
@@ -18,12 +19,14 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #0d1320; --card: #151d2e; --text: #e6ebf5; --muted: #98a3b8; --border: #26324a;
     --accent: #5b95ff; --accent-text: #08101e; --good: #4cc488; --warn: #f0a640; --row-hl: #1c2a46; --keypad: #0f1626; --key-hl: #1a2a4a;
     --map-sea: #0b1220; --map-land: #2a3954; --map-grid: rgba(230, 235, 245, 0.07); --map-night: rgba(0, 0, 0, 0.42);
   }
 }
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #0d1320; --card: #151d2e; --text: #e6ebf5; --muted: #98a3b8; --border: #26324a;
   --accent: #5b95ff; --accent-text: #08101e; --good: #4cc488; --warn: #f0a640; --row-hl: #1c2a46; --keypad: #0f1626; --key-hl: #1a2a4a;
     --map-sea: #0b1220; --map-land: #2a3954; --map-grid: rgba(230, 235, 245, 0.07); --map-night: rgba(0, 0, 0, 0.42);
@@ -244,3 +247,18 @@ input:disabled { opacity: .5; }
 .ariss-freq { color: var(--accent); }
 .ariss-note { color: var(--accent); }
 .focus-bar { margin-top: 12px; padding: 8px 12px; border-radius: 8px; background: var(--row-hl); font-size: .9rem; }
+
+/* Date/time pickers: the whole field opens the picker, and the calendar button follows the theme */
+input[type="datetime-local"] { cursor: pointer; min-height: 38px; }
+input[type="datetime-local"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .85; padding: 2px; }
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+.win-actions { display: flex; gap: 14px; align-items: center; }
+.link-status { color: var(--good); font-size: .8rem; font-weight: 600; }
+.link-note { margin: 0 0 12px; padding: 8px 12px; border-radius: 8px; background: var(--row-hl); font-size: .9rem; }
+fieldset.window legend .small { margin-left: 4px; }
+
+/* Per-pass calendar buttons */
+td.cal { white-space: nowrap; }
+.cal-btn { display: inline-block; font-size: .78rem; padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--accent); background: transparent; text-decoration: none; cursor: pointer; line-height: 1.5; }
+.cal-btn + .cal-btn { margin-left: 6px; }
+.cal-btn:hover { border-color: var(--accent); }

@@ -22,6 +22,7 @@
 <main>
   <section class="card" id="setup">
     <h2>Your location</h2>
+    <p class="link-note" id="link-note" role="status" hidden></p>
     <form id="loc-form">
       <div class="row">
         <label>Latitude <input id="lat" type="number" step="any" min="-90" max="90" placeholder="51.5074"></label>
@@ -38,9 +39,12 @@
         <div class="row">
           <label>From <input id="win-start" type="datetime-local"></label>
           <label>To <input id="win-end" type="datetime-local"></label>
-          <div class="win-actions"><button type="button" id="win-clear" class="link">Clear dates</button></div>
+          <div class="win-actions">
+            <button type="button" id="win-link" class="link" data-copy-link>Copy link</button>
+            <button type="button" id="win-clear" class="link">Clear dates</button>
+          </div>
         </div>
-        <p class="hint">Set both to predict passes for a fixed period, up to 10 days, such as an ARISS event, instead of looking ahead from now. Times are your local time.</p>
+        <p class="hint">Set both to predict passes for a fixed period, up to 10 days, such as an ARISS event, instead of looking ahead from now. Times are your local time. The dates are kept in the page address, so you can bookmark or share it. Your location is never included.</p>
       </fieldset>
       <div class="buttons">
         <button type="submit" class="primary">Predict passes</button>
@@ -160,16 +164,16 @@
       </div>
       <p class="hint">The Channel column shows which memory channels to use on each pass, in order: start on the first as the satellite rises and step down as it passes. Change these if you imported the CHIRP file somewhere other than channel 1.</p>
     </details>
-    <div class="focus-bar" id="focus-bar" hidden><span id="focus-text"></span> <button type="button" class="link" id="focus-clear">Show all satellites</button></div>
+    <div class="focus-bar" id="focus-bar" hidden><span id="focus-text"></span> <button type="button" class="link" data-copy-link>Copy link</button> · <button type="button" class="link" id="focus-clear">Show all satellites</button></div>
     <label class="check"><input type="checkbox" id="hide-unknown"> Hide satellites with no published SSTV mode</label>
     <div class="filters" id="filters"></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Satellite</th><th>MHz</th><th title="Memory channels from the CHIRP file, in the order to use them">Channel</th><th>SSTV mode</th><th>AOS</th><th>Max el</th><th>LOS</th><th>Length</th><th>Doppler AOS / LOS</th></tr></thead>
+        <thead><tr><th>Satellite</th><th>MHz</th><th title="Memory channels from the CHIRP file, in the order to use them">Channel</th><th>SSTV mode</th><th>AOS</th><th>Max el</th><th>LOS</th><th>Length</th><th>Doppler AOS / LOS</th><th>Calendar</th></tr></thead>
         <tbody id="passes"></tbody>
       </table>
     </div>
-    <p class="hint">Click a pass to replay it on the map.</p>
+    <p class="hint">Click a pass to replay it on the map. <b>Google</b> adds that pass to Google Calendar, and <b>.ics</b> downloads it for Outlook, Apple Calendar and others. <b>Add to calendar (.ics)</b> at the top saves every pass in the list, so while you're viewing an ARISS event that's all the event's passes.</p>
     <p class="hint" id="data-age"></p>
   </section>
 

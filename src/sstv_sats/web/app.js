@@ -26,6 +26,7 @@
   // ARISS SSTV events (data/ariss.json, read from ariss.org by the site build), and the one the
   // pass list is narrowed to after "Show passes during this event".
   let ariss = null, focus = null, lastWindow = null;
+  let shownRows = []; // passes in the table, in order, for each row's calendar buttons
 
   // ---------- data ----------
   function parseTles(text) {
@@ -197,6 +198,63 @@
     $("hours").disabled = on;
     $("hours").title = on ? "The time window below is used instead" : "";
     $("win-clear").hidden = !on;
+    $("win-link").hidden = !on;
+  }
+
+  // ---------- shareable links ----------
+  // The address keeps what the pass list shows, never the location:
+  //   #event=series-35-ISS                         passes during an ARISS event (its dates come from the schedule)
+  //   #from=2026-11-09T18:00Z&to=2026-11-10T06:00Z  a time window, in UTC so the link works in any time zone
+  const utcParam = (ms) => new Date(ms).toISOString().slice(0, 16) + "Z";
+
+  function linkHash() {
+    if (focus) return `#event=${encodeURIComponent(focus.id)}`;
+    if (lastWindow) return `#from=${utcParam(lastWindow.start)}&to=${utcParam(lastWindow.end)}`;
+    return "";
+  }
+
+  function updateHash() {
+    const h = linkHash();
+    if (h === location.hash || (!h && !location.hash)) return;
+    history.replaceState(null, "", location.pathname + location.search + h);
+  }
+
+  const shareUrl = (hash) => location.origin + location.pathname + location.search + hash;
+
+  // Apply #event=… or #from=…&to=…; returns true if the address asked for something.
+  function applyHash() {
+    const q = new URLSearchParams(location.hash.slice(1));
+    const note = (msg) => { $("link-note").hidden = !msg; $("link-note").textContent = msg || ""; };
+    note("");
+    if (q.get("event")) {
+      const e = ariss && ariss.events.find((x) => x.id === q.get("event"));
+      if (!e) { note("The ARISS event in this link is no longer listed, so passes are shown from now."); return false; }
+      setEventWindow(e);
+      if (!hasLocation()) note(`Enter your location to see the ${e.satellite} passes during ${evName(e)}${e.theme ? ` “${e.theme}”` : ""}.`);
+      return true;
+    }
+    const from = Date.parse(q.get("from") || ""), to = Date.parse(q.get("to") || "");
+    if (from && to && to > from) {
+      focus = null;
+      $("win-start").value = toLocalInput(from);
+      $("win-end").value = toLocalInput(Math.min(to, from + MAX_WINDOW_MS));
+      syncWindowUi();
+      if (!hasLocation()) note("Enter your location to see the passes for the dates in this link.");
+      return true;
+    }
+    return false;
+  }
+
+  function hasLocation() { try { readLocation(); return true; } catch { return false; } }
+
+  async function copyLink(url, btn) {
+    let ok = false;
+    try { await navigator.clipboard.writeText(url); ok = true; } catch { ok = !!window.prompt("Copy this link:", url); }
+    if (!ok || !btn) return;
+    const old = btn.textContent;
+    btn.textContent = "Link copied ✓";
+    btn.classList.add("link-status");
+    setTimeout(() => { btn.textContent = old; btn.classList.remove("link-status"); }, 2000);
   }
 
   function run() {
@@ -218,6 +276,8 @@
     }
     passes.sort((a, b) => a.aos.time - b.aos.time);
     $("results").hidden = false;
+    $("link-note").hidden = true;
+    updateHash();
     renderFilters(); renderPasses(); tick();
   }
 
@@ -275,7 +335,8 @@
       ? `<p class="ariss-submit">Submit your decoded pictures to the <a href="${esc(e.submit_url)}" target="_blank" rel="noopener">ARISS SSTV Gallery</a>${e.certificate ? ". Original decodes qualify for the official event certificate." : "."}</p>` : "";
     const actions = st === "ended" ? "" : `<div class="buttons">
         <button type="button" class="primary" data-ev-passes="${esc(e.id)}">Show ${esc(satName)} passes during this event</button>
-        <button type="button" data-ev-ics="${esc(e.id)}">Add event to calendar (.ics)</button></div>`;
+        <button type="button" data-ev-ics="${esc(e.id)}">Add event to calendar (.ics)</button>
+        <button type="button" class="link" data-ev-link="${esc(e.id)}" title="A link to this event's passes, for anyone's location">Copy link</button></div>`;
     return `<article class="ariss-ev ${st}">
       <div class="ariss-top"><div>
         <div class="label">${esc(evName(e))}</div>
@@ -300,22 +361,32 @@
     $("ariss-checked").textContent = ariss.fetched ? `Checked ${fmtDay(new Date(ariss.fetched))} ${fmtTime(new Date(ariss.fetched))}` : "";
   }
 
-  function showEventPasses(id) {
-    const e = ariss && ariss.events.find((x) => x.id === id);
-    if (!e) return;
-    try { readLocation(); } catch {
-      alert("Enter your location first, then press the button again.");
-      $("setup").scrollIntoView({ behavior: "smooth", block: "start" });
-      return $("lat").focus();
-    }
-    const start = Math.max(evStart(e), Date.now()), end = Math.min(evEnd(e), start + MAX_WINDOW_MS);
+  // Time window = the rest of the event (or all of it, once it has ended), narrowed to its satellite.
+  function setEventWindow(e) {
+    const start = evStatus(e) === "ended" ? evStart(e) : Math.max(evStart(e), Date.now());
+    const end = Math.min(evEnd(e), start + MAX_WINDOW_MS);
     $("win-start").value = toLocalInput(start);
     $("win-end").value = toLocalInput(Math.ceil(end / 60000) * 60000);
     syncWindowUi();
     focus = e;
+  }
+
+  function showEventPasses(id) {
+    const e = ariss && ariss.events.find((x) => x.id === id);
+    if (!e) return;
+    setEventWindow(e);
+    if (!hasLocation()) {
+      lastWindow = null;
+      updateHashFor(e);
+      alert("Enter your location first, then press Predict passes.");
+      $("setup").scrollIntoView({ behavior: "smooth", block: "start" });
+      return $("lat").focus();
+    }
     run();
     $("results").scrollIntoView({ behavior: "smooth", block: "start" });
   }
+
+  function updateHashFor(e) { history.replaceState(null, "", location.pathname + location.search + `#event=${encodeURIComponent(e.id)}`); }
 
   function downloadEventIcs(id) {
     const e = ariss && ariss.events.find((x) => x.id === id);
@@ -349,7 +420,8 @@
 
   function renderPasses() {
     const now = Date.now(), rows = visible();
-    $("passes").innerHTML = rows.length ? rows.map((p) => {
+    shownRows = rows;
+    $("passes").innerHTML = rows.length ? rows.map((p, i) => {
       const ev = eventFor(p);
       // During an ARISS event, highlight the downlink in use and work out Doppler on it.
       const f = p.sat.downlinks.map((d) => (ev && Math.abs(d.freq_mhz - ev.freq_mhz) < 0.0015
@@ -367,8 +439,9 @@
         <td class="${elCls}">${p.tca.el.toFixed(0)}° <span class="small">${compass(p.tca.az)} ${fmtTime(p.tca.time)}</span></td>
         <td>${fmtTime(p.los.time)} <span class="small">${compass(p.los.az)}</span></td>
         <td>${fmtDur(p.los.time - p.aos.time)}</td>
-        <td>${sign(doppler(p.aos, f0))} / ${sign(doppler(p.los, f0))} kHz</td></tr>`;
-    }).join("") : `<tr><td colspan="9">No passes found. Try ${lastWindow ? "a longer time window" : "more hours"} or a lower minimum elevation${hideUnknown && !focus ? ", or show satellites with no published mode" : ""}.</td></tr>`;
+        <td>${sign(doppler(p.aos, f0))} / ${sign(doppler(p.los, f0))} kHz</td>
+        <td class="cal"><a class="cal-btn" href="${esc(googleCalUrl(p))}" target="_blank" rel="noopener" title="Add this pass to Google Calendar">Google</a><button type="button" class="cal-btn" data-ics="${i}" title="Download this pass as a calendar file (.ics) for Outlook, Apple Calendar and others">.ics</button></td></tr>`;
+    }).join("") : `<tr><td colspan="10">No passes found. Try ${lastWindow ? "a longer time window" : "more hours"} or a lower minimum elevation${hideUnknown && !focus ? ", or show satellites with no published mode" : ""}.</td></tr>`;
     const oldest = Math.max(...passes.map((p) => (now - p.epoch) / 86400000), 0);
     const span = lastWindow ? ` Window: ${fmtDay(new Date(lastWindow.start))} ${fmtTime(new Date(lastWindow.start))} to ${fmtDay(new Date(lastWindow.end))} ${fmtTime(new Date(lastWindow.end))}.` : "";
     const far = lastWindow && lastWindow.end - now > 7 * 86400000 ? " Predictions more than a week ahead can be out by several minutes, so check again nearer the time." : "";
@@ -458,17 +531,55 @@
 
   function icsDate(d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }
 
-  function downloadIcs() {
+  // Title and notes for one pass, shared by the .ics files and the Google Calendar link.
+  function passInfo(p) {
+    const ev = eventFor(p);
+    const freq = (ev && ev.freq_mhz) || p.sat.downlinks[0].freq_mhz;
+    const lines = [
+      `Frequency: ${p.sat.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / ")} MHz FM${ev && ev.freq_mhz ? ` (ARISS event on ${ev.freq_mhz.toFixed(3)})` : ""}`,
+      `SSTV mode: ${ev && ev.sstv_mode ? ev.sstv_mode : modeText(p.sat)}`,
+      `Rises ${compass(p.aos.az)} at ${fmtTime(p.aos.time)}, highest ${p.tca.el.toFixed(0)}° ${compass(p.tca.az)} at ${fmtTime(p.tca.time)}, sets ${compass(p.los.az)} at ${fmtTime(p.los.time)}`,
+      `Doppler: ${sign(doppler(p.aos, freq))} kHz at rise, ${sign(doppler(p.los, freq))} kHz at set`,
+    ];
+    const ch = channelText(p.sat);
+    if (ch) lines.push(`Radio channels: ${ch} (as it rises → as it sets)`);
+    if (ev) {
+      lines.push(`${evName(ev)}${ev.theme ? ` "${ev.theme}"` : ""}${ev.schedule ? `: ${ev.schedule}` : ""}`);
+      if (ev.submit_url) lines.push(`Submit decoded pictures: ${ev.submit_url}`);
+    }
+    return {
+      title: `${ev ? `${evName(ev)} ` : ""}SSTV: ${label(p.sat)} ${p.tca.el.toFixed(0)}° on ${freq.toFixed(3)} MHz`,
+      details: lines.join("\n"),
+    };
+  }
+
+  // iCalendar text: escape \ ; , and newlines.
+  const icsText = (s) => s.replace(/[\\;,]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
+
+  function icsFor(list) {
     const lead = Math.round(parseFloat($("lead").value) || 10), stamp = icsDate(new Date());
-    const ev = visible().map((p) => [
-      "BEGIN:VEVENT", `UID:${p.sat.norad_id}-${icsDate(p.aos.time)}@sstv-sats`, `DTSTAMP:${stamp}`,
-      `DTSTART:${icsDate(p.aos.time)}`, `DTEND:${icsDate(p.los.time)}`,
-      `SUMMARY:SSTV ${label(p.sat)} ${p.tca.el.toFixed(0)}° ${p.sat.downlinks[0].freq_mhz.toFixed(3)}`,
-      `DESCRIPTION:${p.sat.downlinks.map((d) => d.freq_mhz.toFixed(3)).join(" / ")} MHz\\nAOS ${compass(p.aos.az)} - max ${p.tca.el.toFixed(0)}° ${compass(p.tca.az)} - LOS ${compass(p.los.az)}`,
-      "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${label(p.sat)} pass soon`, `TRIGGER:-PT${lead}M`, "END:VALARM", "END:VEVENT",
-    ].join("\r\n"));
-    const text = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//sstv-sats//web//EN", ...ev, "END:VCALENDAR", ""].join("\r\n");
-    saveFile(text, "sstv_passes.ics");
+    const ev = list.map((p) => {
+      const info = passInfo(p);
+      return [
+        "BEGIN:VEVENT", `UID:${p.sat.norad_id}-${icsDate(p.aos.time)}@sstv-sats`, `DTSTAMP:${stamp}`,
+        `DTSTART:${icsDate(p.aos.time)}`, `DTEND:${icsDate(p.los.time)}`,
+        `SUMMARY:${icsText(info.title)}`, `DESCRIPTION:${icsText(info.details)}`,
+        "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${icsText(`${label(p.sat)} pass soon`)}`, `TRIGGER:-PT${lead}M`, "END:VALARM", "END:VEVENT",
+      ].join("\r\n");
+    });
+    return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//sstv-sats//web//EN", ...ev, "END:VCALENDAR", ""].join("\r\n");
+  }
+
+  function downloadIcs() {
+    const list = visible();
+    saveFile(icsFor(list), focus ? `${focus.id}_passes.ics` : "sstv_passes.ics");
+  }
+
+  // Google Calendar's "add event" page, filled in. Nothing is sent until you press Save there.
+  function googleCalUrl(p) {
+    const info = passInfo(p);
+    const q = new URLSearchParams({ action: "TEMPLATE", text: info.title, dates: `${icsDate(p.aos.time)}/${icsDate(p.los.time)}`, details: info.details });
+    return `https://calendar.google.com/calendar/render?${q}`;
   }
 
   function saveFile(text, name) {
@@ -643,25 +754,45 @@
     updateAlertButton();
     mergeCatalog();
     renderAriss();
+    applyHash(); // a shared link's dates (or event) win over the ones saved in this browser
     refreshSatellites();
     refreshCustomTles();
   }
 
   renderKeymap();
   $("loc-form").addEventListener("submit", (e) => { e.preventDefault(); run(); });
-  for (const id of ["win-start", "win-end"]) $(id).addEventListener("change", syncWindowUi);
+  // Editing the dates by hand leaves the ARISS event view (its link would no longer match them).
+  for (const id of ["win-start", "win-end"]) $(id).addEventListener("change", () => { focus = null; syncWindowUi(); });
   $("win-clear").addEventListener("click", () => {
     $("win-start").value = ""; $("win-end").value = "";
     syncWindowUi(); store.set("window", null);
-    focus = null;
-    if (passes.length || store.get("loc", null)) run();
+    focus = null; lastWindow = null;
+    updateHash();
+    if (hasLocation()) run();
   });
-  $("focus-clear").addEventListener("click", () => { focus = null; renderFilters(); renderPasses(); tick(); });
+  $("focus-clear").addEventListener("click", () => { focus = null; updateHash(); renderFilters(); renderPasses(); tick(); });
   $("ariss").addEventListener("click", (e) => {
     const t = e.target.closest("button");
     if (!t) return;
     if (t.dataset.evPasses) showEventPasses(t.dataset.evPasses);
     else if (t.dataset.evIcs) downloadEventIcs(t.dataset.evIcs);
+    else if (t.dataset.evLink) copyLink(shareUrl(`#event=${encodeURIComponent(t.dataset.evLink)}`), t);
+  });
+  // The window's and the event bar's "Copy link": the current address, which run() keeps up to date.
+  for (const b of document.querySelectorAll("[data-copy-link]")) {
+    b.addEventListener("click", () => {
+      let win = null;
+      try { win = readWindow(); } catch (e) { return alert(e.message); }
+      const h = focus ? `#event=${encodeURIComponent(focus.id)}` : win ? `#from=${utcParam(win.start)}&to=${utcParam(win.end)}` : "";
+      copyLink(shareUrl(h), b);
+    });
+  }
+  // Open the date/time picker from anywhere in the field, not just its small calendar button.
+  for (const id of ["win-start", "win-end"]) {
+    $(id).addEventListener("click", (e) => { try { e.target.showPicker(); } catch { /* not supported or already open */ } });
+  }
+  window.addEventListener("hashchange", () => {
+    if (applyHash() && hasLocation()) { run(); $("results").scrollIntoView({ behavior: "smooth", block: "start" }); }
   });
   $("lat").addEventListener("input", () => { $("grid").value = ""; });
   $("lon").addEventListener("input", () => { $("grid").value = ""; });
@@ -729,6 +860,14 @@
   $("add-form").addEventListener("submit", addSatellite);
   $("catalog").addEventListener("click", (e) => { const id = e.target.dataset && e.target.dataset.remove; if (id) removeSatellite(id); });
   $("passes").addEventListener("click", (e) => {
+    const cal = e.target.closest(".cal-btn");
+    if (cal) { // calendar buttons don't replay the pass on the map
+      if (cal.dataset.ics) {
+        const p = shownRows[+cal.dataset.ics];
+        if (p) saveFile(icsFor([p]), `sstv_${norm(p.sat.id).toLowerCase()}_${icsDate(p.aos.time).slice(0, 13)}.ics`);
+      }
+      return;
+    }
     const row = e.target.closest("tr[data-sat]");
     if (!row || !window.SstvMap) return;
     SstvMap.showPass(row.dataset.sat, +row.dataset.aos);
